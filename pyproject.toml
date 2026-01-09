@@ -1,0 +1,72 @@
+[project]
+name = "pymdm"
+dynamic = ["version"]
+description = "Utility functions commonly used in Jamf deployment scripts."
+readme = "README.md"
+keywords = ["it", "mdm", "jamf"]
+authors = [{ name = "Andrew Lerman", email="info@liquidzoo.io" }]
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "pytest>=8.2.2",
+    "pytest-cov>=7.0.0",
+    "requests>=2.32.5",
+    "ruff>=0.5.1",
+]
+
+[build-system]
+requires = [
+  "setuptools >= 61",
+  "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pymdm*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pymdm.__version__" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint]
+select = [
+  "E101",
+  "F401",
+  "F403",
+  "I001",
+  "N801",
+  "N802",
+  "N806"
+]
+ignore = ["E722"]
+per-file-ignores = {"__init__.py" = ["F401"]}
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--durations=5",
+    "--color=yes",
+    "--cov=src",
+    "--cov-report=html:coverage/htmlcov",
+    "--cov-report=term-missing",
+#    "--cov-fail-under=90",
+]
+testpaths = [ "./tests" ]
