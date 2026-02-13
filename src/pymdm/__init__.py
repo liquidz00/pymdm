@@ -1,11 +1,13 @@
 """
-pymdm - Utility package for Jamf MDM deployment scripts.
+pymdm - Cross-platform utility package for MDM deployment scripts.
 
-Provides logging, Jamf parameter parsing, webhook sending, and swiftDialog integration.
+Provides logging, MDM parameter parsing, webhook sending, system information
+retrieval, command execution, and dialog integration. Supports macOS/Jamf Pro,
+Windows/Intune, and Linux platforms.
 """
 
 __title__ = "pymdm"
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 from .command_runner import CommandRunner
