@@ -1,9 +1,9 @@
 [project]
 name = "pymdm"
 dynamic = ["version"]
-description = "Utility functions commonly used in Jamf deployment scripts."
+description = "Cross-platform utility package for MDM deployment scripts (Jamf Pro, Intune)."
 readme = "README.md"
-keywords = ["it", "mdm", "jamf"]
+keywords = ["it", "mdm", "jamf", "intune", "endpoint", "deployment"]
 authors = [{ name = "Andrew Lerman", email="info@liquidzoo.io" }]
 requires-python = ">=3.12"
 
