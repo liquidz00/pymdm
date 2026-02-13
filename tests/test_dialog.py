@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform != "darwin", reason="dialog is macOS-only")
 
 from pymdm import (
     CheckboxItem,
