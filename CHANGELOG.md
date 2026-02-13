@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.0] - 2026-02-13
+
 ### Added
 
-- Cross-platform support: macOS and Windows
+- Windows/Intune support alongside existing macOS/Jamf Pro functionality
 - Platform abstraction layer (`pymdm.platforms`) with OS-specific implementations
   - `pymdm.platforms.darwin` - macOS: system_profiler, launchctl
   - `pymdm.platforms.win32` - Windows: PowerShell, wmic, runas
