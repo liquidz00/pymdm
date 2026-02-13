@@ -106,49 +106,6 @@ class DarwinPlatformInfo:
         return f"macOS Version: {platform.release()}"
 
 
-class DarwinDialogSupport:
-    """macOS implementation of PlatformDialogSupport.
-
-    macOS uses swiftDialog for GUI dialogs, installed at /usr/local/bin/dialog.
-    """
-
-    @property
-    def shared_temp_dir(self) -> str:
-        """Shared temp directory on macOS: /Users/Shared.
-
-        :return: "/Users/Shared"
-        :rtype: str
-        """
-        return "/Users/Shared"
-
-    @property
-    def standard_binary_path(self) -> str | None:
-        """Standard swiftDialog installation path on macOS.
-
-        :return: "/usr/local/bin/dialog"
-        :rtype: str | None
-        """
-        return "/usr/local/bin/dialog"
-
-    @property
-    def dialog_available(self) -> bool:
-        """swiftDialog is supported on macOS.
-
-        :return: True
-        :rtype: bool
-        """
-        return True
-
-    @property
-    def unavailable_message(self) -> str:
-        """Not applicable for macOS (dialogs are available).
-
-        :return: Empty string
-        :rtype: str
-        """
-        return ""
-
-
 class DarwinCommandSupport:
     """macOS implementation of PlatformCommandSupport.
 

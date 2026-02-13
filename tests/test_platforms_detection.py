@@ -9,22 +9,14 @@ import pytest
 from pymdm.platforms._detection import (
     clear_platform_cache,
     get_command_support,
-    get_dialog_support,
     get_platform,
 )
 from pymdm.platforms.darwin import (
     DarwinCommandSupport,
-    DarwinDialogSupport,
     DarwinPlatformInfo,
-)
-from pymdm.platforms.linux import (
-    LinuxCommandSupport,
-    LinuxDialogSupport,
-    LinuxPlatformInfo,
 )
 from pymdm.platforms.win32 import (
     Win32CommandSupport,
-    Win32DialogSupport,
     Win32PlatformInfo,
 )
 
@@ -61,23 +53,23 @@ class TestGetPlatform:
         result = get_platform()
         assert isinstance(result, Win32PlatformInfo)
 
-    def test_linux_detection(self, monkeypatch: MonkeyPatch) -> None:
-        """Test that Linux platform is detected correctly."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "linux")
-        result = get_platform()
-        assert isinstance(result, LinuxPlatformInfo)
-
     def test_unsupported_platform(self, monkeypatch: MonkeyPatch) -> None:
         """Test that unsupported platforms raise NotImplementedError."""
         monkeypatch.setenv("PYMDM_PLATFORM", "freebsd")
         with pytest.raises(NotImplementedError, match="freebsd"):
             get_platform()
 
+    def test_linux_unsupported(self, monkeypatch: MonkeyPatch) -> None:
+        """Test that Linux raises NotImplementedError (not currently supported)."""
+        monkeypatch.setenv("PYMDM_PLATFORM", "linux")
+        with pytest.raises(NotImplementedError, match="linux"):
+            get_platform()
+
     def test_env_var_override(self, monkeypatch: MonkeyPatch) -> None:
         """Test that PYMDM_PLATFORM env var overrides sys.platform."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "linux")
+        monkeypatch.setenv("PYMDM_PLATFORM", "win32")
         result = get_platform()
-        assert isinstance(result, LinuxPlatformInfo)
+        assert isinstance(result, Win32PlatformInfo)
 
     def test_case_insensitive(self, monkeypatch: MonkeyPatch) -> None:
         """Test that platform detection is case-insensitive."""
@@ -101,45 +93,11 @@ class TestGetCommandSupport:
         result = get_command_support()
         assert isinstance(result, Win32CommandSupport)
 
-    def test_linux_command_support(self, monkeypatch: MonkeyPatch) -> None:
-        """Test Linux command support is returned for Linux."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "linux")
-        result = get_command_support()
-        assert isinstance(result, LinuxCommandSupport)
-
     def test_unsupported_platform(self, monkeypatch: MonkeyPatch) -> None:
         """Test that unsupported platforms raise NotImplementedError."""
         monkeypatch.setenv("PYMDM_PLATFORM", "freebsd")
         with pytest.raises(NotImplementedError):
             get_command_support()
-
-
-class TestGetDialogSupport:
-    """Tests for get_dialog_support() factory function."""
-
-    def test_darwin_dialog_support(self, monkeypatch: MonkeyPatch) -> None:
-        """Test Darwin dialog support is returned for macOS."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "darwin")
-        result = get_dialog_support()
-        assert isinstance(result, DarwinDialogSupport)
-
-    def test_win32_dialog_support(self, monkeypatch: MonkeyPatch) -> None:
-        """Test Win32 dialog support is returned for Windows."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "win32")
-        result = get_dialog_support()
-        assert isinstance(result, Win32DialogSupport)
-
-    def test_linux_dialog_support(self, monkeypatch: MonkeyPatch) -> None:
-        """Test Linux dialog support is returned for Linux."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "linux")
-        result = get_dialog_support()
-        assert isinstance(result, LinuxDialogSupport)
-
-    def test_unsupported_platform(self, monkeypatch: MonkeyPatch) -> None:
-        """Test that unsupported platforms raise NotImplementedError."""
-        monkeypatch.setenv("PYMDM_PLATFORM", "freebsd")
-        with pytest.raises(NotImplementedError):
-            get_dialog_support()
 
 
 class TestClearPlatformCache:
@@ -152,6 +110,6 @@ class TestClearPlatformCache:
         assert isinstance(first, DarwinPlatformInfo)
 
         clear_platform_cache()
-        monkeypatch.setenv("PYMDM_PLATFORM", "linux")
+        monkeypatch.setenv("PYMDM_PLATFORM", "win32")
         second = get_platform()
-        assert isinstance(second, LinuxPlatformInfo)
+        assert isinstance(second, Win32PlatformInfo)

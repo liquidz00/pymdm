@@ -2,7 +2,7 @@
 
 A cross-platform Python utility package for MDM deployment scripts, providing common functionality for Jamf Pro, Microsoft Intune, and other endpoint management workflows.
 
-Originally designed for use with [MacAdmins Python](https://github.com/macadmins/python) (`#!/usr/local/bin/managed_python3`), now supports macOS, Windows, and Linux.
+Originally designed for use with [MacAdmins Python](https://github.com/macadmins/python) (`#!/usr/local/bin/managed_python3`), now supports macOS and Windows.
 
 ## Features
 
@@ -15,15 +15,15 @@ Originally designed for use with [MacAdmins Python](https://github.com/macadmins
 
 ### Cross-Platform Support
 
-| Feature | macOS (Jamf) | Windows (Intune) | Linux |
-|---|---|---|---|
-| SystemInfo | Full | Full | Full |
-| CommandRunner | Full | Full | Full |
-| MdmLogger | Full | Full | Full |
-| WebhookSender | Full | Full | Full |
-| ParamParser (Jamf) | Full | N/A | N/A |
-| IntuneParamProvider | N/A | Full | N/A |
-| Dialog (swiftDialog) | Full | Graceful stub | Graceful stub |
+| Feature | macOS (Jamf) | Windows (Intune) |
+|---|---|---|
+| SystemInfo | Full | Full |
+| CommandRunner | Full | Full |
+| MdmLogger | Full | Full |
+| WebhookSender | Full | Full |
+| ParamParser (Jamf) | Full | N/A |
+| IntuneParamProvider | N/A | Full |
+| Dialog (swiftDialog) | Full | Graceful error |
 
 ## Installation
 
@@ -119,7 +119,6 @@ output = runner.run("ps aux | grep python", timeout=10)
 
 # Run as logged-in user (platform-aware)
 # macOS: uses launchctl asuser
-# Linux: uses sudo -u
 # Windows: uses PowerShell Start-Process
 runner = CommandRunner(logger=logger, username="jsmith", uid=501)
 output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
@@ -131,7 +130,7 @@ output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
 from pymdm import SystemInfo
 
 # Get serial number (cross-platform)
-# macOS: system_profiler | Windows: PowerShell/wmic | Linux: /sys/class/dmi
+# macOS: system_profiler | Windows: PowerShell/wmic
 serial = SystemInfo.get_serial_number()
 
 # Get console user info (cross-platform)
@@ -258,7 +257,7 @@ except Exception as e:
 
 | Variable | Purpose | Values |
 |---|---|---|
-| `PYMDM_PLATFORM` | Override platform auto-detection | `darwin`, `win32`, `linux` |
+| `PYMDM_PLATFORM` | Override platform auto-detection | `darwin`, `win32` |
 | `PYMDM_MDM_PROVIDER` | Override MDM provider auto-detection | `jamf`, `intune` |
 
 ### Task Mapping: Jamf vs Intune
@@ -294,9 +293,8 @@ from pymdm.platforms import get_platform
 ```
 pymdm/
 ├── platforms/          # OS-specific implementations
-│   ├── darwin.py       # macOS: system_profiler, launchctl, swiftDialog
-│   ├── win32.py        # Windows: PowerShell, wmic, runas
-│   └── linux.py        # Linux: /sys/class/dmi, sudo, pwd
+│   ├── darwin.py       # macOS: system_profiler, launchctl
+│   └── win32.py        # Windows: PowerShell, wmic, runas
 ├── mdm/                # MDM provider implementations
 │   ├── jamf.py         # Jamf Pro: sys.argv[4-11] parsing
 │   └── intune.py       # Intune: env vars, flexible argv

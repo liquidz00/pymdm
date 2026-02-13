@@ -88,7 +88,8 @@ def test_logger_startup_info(capsys):
     assert "test_script" in captured.out
     assert "1.0.0" in captured.out
     assert "Python:" in captured.out
-    assert "macOS Version:" in captured.out
+    # OS version label is platform-dependent
+    assert "Version:" in captured.out
 
 
 def test_logger_get_log_path(temp_log_file):

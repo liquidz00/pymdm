@@ -3,7 +3,7 @@ Platform detection and factory functions.
 
 Auto-detects the current platform (or reads an override from the
 PYMDM_PLATFORM environment variable) and returns the appropriate
-platform-specific implementation.
+platform-specific implementation. Currently supports macOS and Windows.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import os
 import sys
 from functools import lru_cache
 
-from ._base import PlatformCommandSupport, PlatformDialogSupport, PlatformInfo
+from ._base import PlatformCommandSupport, PlatformInfo
 
 
 @lru_cache(maxsize=1)
@@ -20,7 +20,7 @@ def get_platform() -> PlatformInfo:
     """Auto-detect and return the platform-specific PlatformInfo implementation.
 
     The detection order is:
-    1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32", "linux")
+    1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32")
     2. ``sys.platform`` automatic detection
 
     :return: Platform-specific PlatformInfo instance
@@ -39,14 +39,9 @@ def get_platform() -> PlatformInfo:
 
         return Win32PlatformInfo()
 
-    if platform_key.startswith("linux"):
-        from .linux import LinuxPlatformInfo
-
-        return LinuxPlatformInfo()
-
     raise NotImplementedError(
         f"Platform '{platform_key}' is not supported by pymdm. "
-        f"Supported platforms: darwin, win32, linux. "
+        f"Supported platforms: darwin, win32. "
         f"Set the PYMDM_PLATFORM environment variable to override detection."
     )
 
@@ -56,7 +51,7 @@ def get_command_support() -> PlatformCommandSupport:
     """Auto-detect and return the platform-specific PlatformCommandSupport implementation.
 
     The detection order is:
-    1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32", "linux")
+    1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32")
     2. ``sys.platform`` automatic detection
 
     :return: Platform-specific PlatformCommandSupport instance
@@ -75,50 +70,9 @@ def get_command_support() -> PlatformCommandSupport:
 
         return Win32CommandSupport()
 
-    if platform_key.startswith("linux"):
-        from .linux import LinuxCommandSupport
-
-        return LinuxCommandSupport()
-
     raise NotImplementedError(
         f"Platform '{platform_key}' is not supported by pymdm. "
-        f"Supported platforms: darwin, win32, linux. "
-        f"Set the PYMDM_PLATFORM environment variable to override detection."
-    )
-
-
-@lru_cache(maxsize=1)
-def get_dialog_support() -> PlatformDialogSupport:
-    """Auto-detect and return the platform-specific PlatformDialogSupport implementation.
-
-    The detection order is:
-    1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32", "linux")
-    2. ``sys.platform`` automatic detection
-
-    :return: Platform-specific PlatformDialogSupport instance
-    :rtype: PlatformDialogSupport
-    :raises NotImplementedError: If the platform is not supported
-    """
-    platform_key = os.environ.get("PYMDM_PLATFORM", sys.platform).lower()
-
-    if platform_key == "darwin":
-        from .darwin import DarwinDialogSupport
-
-        return DarwinDialogSupport()
-
-    if platform_key in ("win32", "windows"):
-        from .win32 import Win32DialogSupport
-
-        return Win32DialogSupport()
-
-    if platform_key.startswith("linux"):
-        from .linux import LinuxDialogSupport
-
-        return LinuxDialogSupport()
-
-    raise NotImplementedError(
-        f"Platform '{platform_key}' is not supported by pymdm. "
-        f"Supported platforms: darwin, win32, linux. "
+        f"Supported platforms: darwin, win32. "
         f"Set the PYMDM_PLATFORM environment variable to override detection."
     )
 
@@ -131,4 +85,3 @@ def clear_platform_cache() -> None:
     """
     get_platform.cache_clear()
     get_command_support.cache_clear()
-    get_dialog_support.cache_clear()

@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import asdict, dataclass, field, fields
 from enum import Enum, IntEnum
@@ -11,26 +12,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .logger import MdmLogger
 
-# Shared temp directory accessible by all local users on macOS (legacy default)
-# Platform-aware default is resolved at runtime via _get_shared_temp_dir()
+# Shared temp directory accessible by all local users on macOS
 _SHARED_TEMP_DIR = "/Users/Shared"
-
-
-def _get_shared_temp_dir() -> str:
-    """Get the platform-appropriate shared temp directory.
-
-    Falls back to the legacy /Users/Shared on macOS if the platform
-    layer is unavailable.
-
-    :return: Shared temp directory path
-    :rtype: str
-    """
-    try:
-        from .platforms._detection import get_dialog_support
-
-        return get_dialog_support().shared_temp_dir
-    except (ImportError, NotImplementedError):
-        return _SHARED_TEMP_DIR
 
 
 _ALIASES = {
@@ -663,15 +646,15 @@ class Dialog:
 
         :param binary_path: Path to swiftDialog binary, or None to auto-discover
         :type binary_path: str | None, optional
-        :param temp_dir: Directory for temp file creation. Defaults to platform-
-            appropriate shared temp dir (/Users/Shared on macOS, system temp on others)
+        :param temp_dir: Directory for temp file creation. Defaults to /Users/Shared
+            (the macOS shared temp directory accessible by all local users)
         :type temp_dir: str | Path | None, optional
         :param use_temp_file: If True, use temp files instead of --jsonstring, defaults to False
         :type use_temp_file: bool, optional
         """
         self.binary_path = binary_path
         if temp_dir is None:
-            temp_dir = _get_shared_temp_dir()
+            temp_dir = _SHARED_TEMP_DIR
         self.temp_dir = Path(temp_dir) if isinstance(temp_dir, str) else temp_dir
         self.use_temp_file = use_temp_file
 
@@ -692,17 +675,9 @@ class Dialog:
                 return self.binary_path
             return None
 
-        # Check platform-specific standard installation location
-        try:
-            from .platforms._detection import get_dialog_support
-
-            dialog_support = get_dialog_support()
-            standard_path = dialog_support.standard_binary_path
-        except (ImportError, NotImplementedError):
-            # Fallback to macOS default
-            standard_path = "/usr/local/bin/dialog"
-
-        if standard_path and Path(standard_path).exists():
+        # Check standard macOS installation location for swiftDialog
+        standard_path = "/usr/local/bin/dialog"
+        if Path(standard_path).exists():
             return standard_path
 
         # Check PATH
@@ -804,21 +779,18 @@ class Dialog:
 
         is_notification = isinstance(template, SystemNotification)
 
-        # Check platform support for dialogs
-        try:
-            from .platforms._detection import get_dialog_support
-
-            dialog_support = get_dialog_support()
-            if not dialog_support.dialog_available:
-                error_msg = dialog_support.unavailable_message
-                if logger:
-                    logger.warn(error_msg)
-                return DialogReturn(
-                    exit_code=DialogExitCode.file_not_found,
-                    raw_output=error_msg,
-                )
-        except (ImportError, NotImplementedError):
-            pass  # Continue with binary discovery (legacy behavior)
+        # swiftDialog is macOS-only; guard against Windows callers
+        if sys.platform != "darwin":
+            error_msg = (
+                "swiftDialog is not available on this platform. "
+                "Dialog functionality is macOS-only."
+            )
+            if logger:
+                logger.warn(error_msg)
+            return DialogReturn(
+                exit_code=DialogExitCode.file_not_found,
+                raw_output=error_msg,
+            )
 
         # Find dialog binary
         dialog_path = self._find_binary()

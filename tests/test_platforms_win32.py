@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 
 from pymdm.platforms.win32 import (
     Win32CommandSupport,
-    Win32DialogSupport,
     Win32PlatformInfo,
 )
 
@@ -28,7 +27,7 @@ class TestWin32PlatformInfo:
         assert "LOCAL SERVICE" in info.invalid_users
         assert "NETWORK SERVICE" in info.invalid_users
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_serial_number_powershell(self, mock_check: Mock) -> None:
         """Test serial number retrieval via PowerShell."""
         mock_check.return_value = "ABC123DEF\n"
@@ -36,7 +35,7 @@ class TestWin32PlatformInfo:
         serial = info.get_serial_number()
         assert serial == "ABC123DEF"
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_serial_number_powershell_fallback_wmic(self, mock_check: Mock) -> None:
         """Test serial number falls back to wmic when PowerShell fails."""
         # First call (PowerShell) fails, second call (wmic) succeeds
@@ -48,21 +47,21 @@ class TestWin32PlatformInfo:
         serial = info.get_serial_number()
         assert serial == "ABC123DEF"
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_serial_number_all_fail(self, mock_check: Mock) -> None:
         """Test serial number returns None when all methods fail."""
         mock_check.side_effect = FileNotFoundError("not found")
         info = Win32PlatformInfo()
         assert info.get_serial_number() is None
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_serial_number_oem_placeholder(self, mock_check: Mock) -> None:
         """Test serial number treats OEM placeholders as None."""
         mock_check.return_value = "To Be Filled By O.E.M.\n"
         info = Win32PlatformInfo()
         assert info.get_serial_number() is None
 
-    @patch("os.getlogin")
+    @patch("pymdm.platforms.win32.os.getlogin")
     def test_get_console_user_success(self, mock_login: Mock) -> None:
         """Test successful console user retrieval."""
         mock_login.return_value = "testuser"
@@ -77,14 +76,14 @@ class TestWin32PlatformInfo:
         assert username == "testuser"
         assert uid == 0  # Windows placeholder
 
-    @patch("os.getlogin")
+    @patch("pymdm.platforms.win32.os.getlogin")
     def test_get_console_user_system(self, mock_login: Mock) -> None:
         """Test console user returns None for SYSTEM account."""
         mock_login.return_value = "SYSTEM"
         info = Win32PlatformInfo()
         assert info.get_console_user() is None
 
-    @patch("os.getlogin")
+    @patch("pymdm.platforms.win32.os.getlogin")
     def test_get_console_user_os_error(self, mock_login: Mock, monkeypatch: MonkeyPatch) -> None:
         """Test console user falls back to USERNAME env var."""
         mock_login.side_effect = OSError("No console")
@@ -98,14 +97,14 @@ class TestWin32PlatformInfo:
         assert result is not None
         assert result[0] == "fallbackuser"
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_user_full_name_powershell(self, mock_check: Mock) -> None:
         """Test full name retrieval via PowerShell."""
         mock_check.return_value = "John Smith\n"
         info = Win32PlatformInfo()
         assert info.get_user_full_name("jsmith") == "John Smith"
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_user_full_name_net_user_fallback(self, mock_check: Mock) -> None:
         """Test full name falls back to net user when PowerShell fails."""
         mock_check.side_effect = [
@@ -115,7 +114,7 @@ class TestWin32PlatformInfo:
         info = Win32PlatformInfo()
         assert info.get_user_full_name("jsmith") == "John Smith"
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.win32.subprocess.check_output")
     def test_get_user_full_name_failure(self, mock_check: Mock) -> None:
         """Test full name returns None when all methods fail."""
         mock_check.side_effect = FileNotFoundError("not found")
@@ -175,29 +174,3 @@ class TestWin32CommandSupport:
         assert "testuser" in " ".join(result)
 
 
-class TestWin32DialogSupport:
-    """Tests for Win32DialogSupport dialog configuration."""
-
-    def test_shared_temp_dir(self) -> None:
-        """Test Windows shared temp directory is the system temp dir."""
-        support = Win32DialogSupport()
-        temp_dir = support.shared_temp_dir
-        assert isinstance(temp_dir, str)
-        assert len(temp_dir) > 0
-
-    def test_standard_binary_path_none(self) -> None:
-        """Test that no standard dialog binary exists on Windows."""
-        support = Win32DialogSupport()
-        assert support.standard_binary_path is None
-
-    def test_dialog_not_available(self) -> None:
-        """Test that dialog is not available on Windows."""
-        support = Win32DialogSupport()
-        assert support.dialog_available is False
-
-    def test_unavailable_message(self) -> None:
-        """Test informative unavailable message on Windows."""
-        support = Win32DialogSupport()
-        msg = support.unavailable_message
-        assert "not available" in msg.lower()
-        assert "Windows" in msg

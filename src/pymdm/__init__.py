@@ -2,8 +2,8 @@
 pymdm - Cross-platform utility package for MDM deployment scripts.
 
 Provides logging, MDM parameter parsing, webhook sending, system information
-retrieval, command execution, and dialog integration. Supports macOS/Jamf Pro,
-Windows/Intune, and Linux platforms.
+retrieval, command execution, and dialog integration. Supports macOS/Jamf Pro
+and Windows/Intune platforms.
 """
 
 __title__ = "pymdm"

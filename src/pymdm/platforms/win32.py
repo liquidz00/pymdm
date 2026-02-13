@@ -162,59 +162,6 @@ class Win32PlatformInfo:
         return f"Windows Version: {platform.version()}"
 
 
-class Win32DialogSupport:
-    """Windows implementation of PlatformDialogSupport.
-
-    swiftDialog is not available on Windows. Dialog functionality
-    returns graceful "not supported" responses. Future implementations
-    may integrate with Windows toast notifications or WPF dialogs.
-    """
-
-    @property
-    def shared_temp_dir(self) -> str:
-        """Shared temp directory on Windows.
-
-        Uses the system TEMP directory since there is no /Users/Shared equivalent.
-
-        :return: System temp directory path
-        :rtype: str
-        """
-        import tempfile
-
-        return tempfile.gettempdir()
-
-    @property
-    def standard_binary_path(self) -> str | None:
-        """No standard dialog binary on Windows.
-
-        :return: None
-        :rtype: str | None
-        """
-        return None
-
-    @property
-    def dialog_available(self) -> bool:
-        """swiftDialog is not available on Windows.
-
-        :return: False
-        :rtype: bool
-        """
-        return False
-
-    @property
-    def unavailable_message(self) -> str:
-        """Explanation for why dialogs are unavailable on Windows.
-
-        :return: Human-readable message
-        :rtype: str
-        """
-        return (
-            "swiftDialog is not available on Windows. "
-            "Dialog functionality is macOS-only. "
-            "Consider using Windows toast notifications or PowerShell-based dialogs."
-        )
-
-
 class Win32CommandSupport:
     """Windows implementation of PlatformCommandSupport.
 

@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 
 from pymdm.platforms.darwin import (
     DarwinCommandSupport,
-    DarwinDialogSupport,
     DarwinPlatformInfo,
 )
 
@@ -28,7 +27,7 @@ class TestDarwinPlatformInfo:
         assert "loginwindow" in info.invalid_users
         assert "_mbsetupuser" in info.invalid_users
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_serial_number_success(self, mock_check: Mock) -> None:
         """Test successful serial number retrieval via system_profiler."""
         mock_check.return_value = json.dumps(
@@ -39,21 +38,21 @@ class TestDarwinPlatformInfo:
         assert serial == "C02ABC123DEF"
         mock_check.assert_called_once()
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_serial_number_failure(self, mock_check: Mock) -> None:
         """Test serial number returns None on failure."""
         mock_check.side_effect = Exception("Command failed")
         info = DarwinPlatformInfo()
         assert info.get_serial_number() is None
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_serial_number_bad_json(self, mock_check: Mock) -> None:
         """Test serial number returns None on bad JSON."""
         mock_check.return_value = "not json"
         info = DarwinPlatformInfo()
         assert info.get_serial_number() is None
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_console_user_success(self, mock_check: Mock) -> None:
         """Test successful console user retrieval."""
         mock_check.side_effect = ["testuser\n", "501\n"]
@@ -68,21 +67,21 @@ class TestDarwinPlatformInfo:
         assert uid == 501
         assert home == Path("/Users/testuser")
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_console_user_invalid_user(self, mock_check: Mock) -> None:
         """Test console user returns None for invalid users (loginwindow, etc.)."""
         mock_check.return_value = "loginwindow\n"
         info = DarwinPlatformInfo()
         assert info.get_console_user() is None
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_console_user_root(self, mock_check: Mock) -> None:
         """Test console user returns None when root is at console."""
         mock_check.return_value = "root\n"
         info = DarwinPlatformInfo()
         assert info.get_console_user() is None
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_console_user_missing_home(self, mock_check: Mock) -> None:
         """Test console user returns None if home directory doesn't exist."""
         mock_check.side_effect = ["testuser\n", "501\n"]
@@ -91,7 +90,7 @@ class TestDarwinPlatformInfo:
         with patch("pathlib.Path.exists", return_value=False):
             assert info.get_console_user() is None
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_console_user_stat_failure(self, mock_check: Mock) -> None:
         """Test console user returns None when stat command fails."""
         import subprocess
@@ -107,14 +106,14 @@ class TestDarwinPlatformInfo:
         assert isinstance(hostname, str)
         assert len(hostname) > 0
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_user_full_name_success(self, mock_check: Mock) -> None:
         """Test successful full name retrieval via id -F."""
         mock_check.return_value = "John Smith\n"
         info = DarwinPlatformInfo()
         assert info.get_user_full_name("jsmith") == "John Smith"
 
-    @patch("subprocess.check_output")
+    @patch("pymdm.platforms.darwin.subprocess.check_output")
     def test_get_user_full_name_failure(self, mock_check: Mock) -> None:
         """Test full name returns None on failure."""
         mock_check.side_effect = Exception("id failed")
@@ -190,25 +189,3 @@ class TestDarwinCommandSupport:
         assert support.validate_user("test_user", 501) is True
 
 
-class TestDarwinDialogSupport:
-    """Tests for DarwinDialogSupport dialog configuration."""
-
-    def test_shared_temp_dir(self) -> None:
-        """Test macOS shared temp directory is /Users/Shared."""
-        support = DarwinDialogSupport()
-        assert support.shared_temp_dir == "/Users/Shared"
-
-    def test_standard_binary_path(self) -> None:
-        """Test macOS standard dialog binary path."""
-        support = DarwinDialogSupport()
-        assert support.standard_binary_path == "/usr/local/bin/dialog"
-
-    def test_dialog_available(self) -> None:
-        """Test that dialog is marked as available on macOS."""
-        support = DarwinDialogSupport()
-        assert support.dialog_available is True
-
-    def test_unavailable_message(self) -> None:
-        """Test empty unavailable message on macOS."""
-        support = DarwinDialogSupport()
-        assert support.unavailable_message == ""

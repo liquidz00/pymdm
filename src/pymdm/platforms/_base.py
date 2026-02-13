@@ -1,7 +1,7 @@
 """
 Protocol definitions for platform-specific implementations.
 
-These protocols define the contracts that each platform (darwin, win32, linux)
+These protocols define the contracts that each platform (darwin, win32)
 must satisfy. Using Protocols (structural subtyping) instead of ABCs so that
 implementations don't need to inherit -- this makes testing and mocking easier.
 """
@@ -107,53 +107,8 @@ class PlatformCommandSupport(Protocol):
     def min_user_uid(self) -> int:
         """Minimum UID for non-system user accounts on this platform.
 
-        :return: Minimum UID threshold (e.g. 500 on macOS, 1000 on Linux)
+        :return: Minimum UID threshold (e.g. 500 on macOS)
         :rtype: int
-        """
-        ...
-
-
-@runtime_checkable
-class PlatformDialogSupport(Protocol):
-    """Protocol for platform-specific dialog/UI support.
-
-    Covers dialog binary discovery, temp directory locations, and
-    platform availability checks for GUI dialogs.
-    """
-
-    @property
-    def shared_temp_dir(self) -> str:
-        """Default shared temp directory for multi-user dialog files.
-
-        :return: Path string to shared temp directory
-        :rtype: str
-        """
-        ...
-
-    @property
-    def standard_binary_path(self) -> str | None:
-        """Standard installation path for the dialog binary on this platform.
-
-        :return: Path string, or None if no standard location exists
-        :rtype: str | None
-        """
-        ...
-
-    @property
-    def dialog_available(self) -> bool:
-        """Whether GUI dialogs are supported on this platform.
-
-        :return: True if dialog functionality is available
-        :rtype: bool
-        """
-        ...
-
-    @property
-    def unavailable_message(self) -> str:
-        """Human-readable message explaining why dialogs are unavailable.
-
-        :return: Explanation string
-        :rtype: str
         """
         ...
 

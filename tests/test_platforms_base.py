@@ -8,22 +8,14 @@ import pytest
 
 from pymdm.platforms._base import (
     PlatformCommandSupport,
-    PlatformDialogSupport,
     PlatformInfo,
 )
 from pymdm.platforms.darwin import (
     DarwinCommandSupport,
-    DarwinDialogSupport,
     DarwinPlatformInfo,
-)
-from pymdm.platforms.linux import (
-    LinuxCommandSupport,
-    LinuxDialogSupport,
-    LinuxPlatformInfo,
 )
 from pymdm.platforms.win32 import (
     Win32CommandSupport,
-    Win32DialogSupport,
     Win32PlatformInfo,
 )
 
@@ -36,8 +28,8 @@ class TestPlatformInfoProtocol:
 
     @pytest.mark.parametrize(
         "impl_class",
-        [DarwinPlatformInfo, Win32PlatformInfo, LinuxPlatformInfo],
-        ids=["darwin", "win32", "linux"],
+        [DarwinPlatformInfo, Win32PlatformInfo],
+        ids=["darwin", "win32"],
     )
     def test_is_platform_info(self, impl_class: type) -> None:
         """Test that implementation is recognized as PlatformInfo."""
@@ -46,8 +38,8 @@ class TestPlatformInfoProtocol:
 
     @pytest.mark.parametrize(
         "impl_class",
-        [DarwinPlatformInfo, Win32PlatformInfo, LinuxPlatformInfo],
-        ids=["darwin", "win32", "linux"],
+        [DarwinPlatformInfo, Win32PlatformInfo],
+        ids=["darwin", "win32"],
     )
     def test_has_invalid_users(self, impl_class: type) -> None:
         """Test that implementation defines invalid_users class variable."""
@@ -57,8 +49,8 @@ class TestPlatformInfoProtocol:
 
     @pytest.mark.parametrize(
         "impl_class",
-        [DarwinPlatformInfo, Win32PlatformInfo, LinuxPlatformInfo],
-        ids=["darwin", "win32", "linux"],
+        [DarwinPlatformInfo, Win32PlatformInfo],
+        ids=["darwin", "win32"],
     )
     def test_has_required_methods(self, impl_class: type) -> None:
         """Test that implementation has all required methods."""
@@ -75,8 +67,8 @@ class TestPlatformCommandSupportProtocol:
 
     @pytest.mark.parametrize(
         "impl_class",
-        [DarwinCommandSupport, Win32CommandSupport, LinuxCommandSupport],
-        ids=["darwin", "win32", "linux"],
+        [DarwinCommandSupport, Win32CommandSupport],
+        ids=["darwin", "win32"],
     )
     def test_is_command_support(self, impl_class: type) -> None:
         """Test that implementation is recognized as PlatformCommandSupport."""
@@ -85,8 +77,8 @@ class TestPlatformCommandSupportProtocol:
 
     @pytest.mark.parametrize(
         "impl_class",
-        [DarwinCommandSupport, Win32CommandSupport, LinuxCommandSupport],
-        ids=["darwin", "win32", "linux"],
+        [DarwinCommandSupport, Win32CommandSupport],
+        ids=["darwin", "win32"],
     )
     def test_has_required_methods(self, impl_class: type) -> None:
         """Test that implementation has all required methods."""
@@ -94,33 +86,3 @@ class TestPlatformCommandSupportProtocol:
         assert callable(getattr(instance, "run_as_user_command", None))
         assert callable(getattr(instance, "validate_user", None))
         assert isinstance(instance.min_user_uid, int)
-
-
-class TestPlatformDialogSupportProtocol:
-    """Verify all PlatformDialogSupport implementations satisfy the protocol."""
-
-    @pytest.mark.parametrize(
-        "impl_class",
-        [DarwinDialogSupport, Win32DialogSupport, LinuxDialogSupport],
-        ids=["darwin", "win32", "linux"],
-    )
-    def test_is_dialog_support(self, impl_class: type) -> None:
-        """Test that implementation is recognized as PlatformDialogSupport."""
-        instance = impl_class()
-        assert isinstance(instance, PlatformDialogSupport)
-
-    @pytest.mark.parametrize(
-        "impl_class",
-        [DarwinDialogSupport, Win32DialogSupport, LinuxDialogSupport],
-        ids=["darwin", "win32", "linux"],
-    )
-    def test_has_required_properties(self, impl_class: type) -> None:
-        """Test that implementation has all required properties."""
-        instance = impl_class()
-        assert isinstance(instance.shared_temp_dir, str)
-        assert isinstance(instance.dialog_available, bool)
-        assert isinstance(instance.unavailable_message, str)
-        # standard_binary_path can be str or None
-        assert instance.standard_binary_path is None or isinstance(
-            instance.standard_binary_path, str
-        )

@@ -78,7 +78,7 @@ def get_provider(provider: str | None = None) -> MdmParamProvider:
         elif sys.platform == "win32":
             provider = "intune"
         else:
-            provider = "jamf"  # Default to Jamf for Linux/other
+            provider = "jamf"  # Default to Jamf for other platforms
 
     provider = provider.lower().strip()
 

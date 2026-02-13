@@ -39,7 +39,7 @@ class CommandRunner:
         Delegates to the platform-specific implementation which checks:
             - Username and UID are both present
             - Username contains only valid characters
-            - UID meets platform-specific minimum (500 on macOS, 1000 on Linux)
+            - UID meets platform-specific minimum (500 on macOS)
 
         :return: True if validation is successful, False otherwise
         :rtype: bool
@@ -112,7 +112,6 @@ class CommandRunner:
 
         Uses platform-specific mechanisms:
         - macOS: ``launchctl asuser`` + ``sudo -u``
-        - Linux: ``sudo -u``
         - Windows: PowerShell ``Start-Process -Credential``
 
         :param command: Command string or list of arguments
