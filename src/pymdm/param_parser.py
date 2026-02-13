@@ -1,8 +1,30 @@
-import sys
+"""
+Backward-compatible facade for MDM script parameter parsing.
+
+Preserves the original ParamParser static-method API while delegating
+to the Jamf-specific implementation in ``pymdm.mdm.jamf``. For Intune
+or other providers, use ``pymdm.mdm.IntuneParamProvider`` directly or
+``pymdm.mdm.get_provider()``.
+"""
+
+from .mdm.jamf import JamfParamParser
+
+# Shared instance used by the static facade
+_jamf_parser = JamfParamParser()
 
 
 class ParamParser:
-    """Helper class for parsing MDM script parameters."""
+    """Helper class for parsing MDM script parameters.
+
+    This class preserves full backward compatibility with the original
+    Jamf-specific ParamParser. All static methods delegate to
+    ``JamfParamParser`` internally.
+
+    For cross-platform / multi-provider usage, prefer:
+    - ``from pymdm.mdm import get_provider`` for auto-detection
+    - ``from pymdm.mdm import JamfParamParser`` for explicit Jamf usage
+    - ``from pymdm.mdm import IntuneParamProvider`` for explicit Intune usage
+    """
 
     # Jamf reserves parameters 0-3
     # $0 = Script name
@@ -16,40 +38,19 @@ class ParamParser:
     @staticmethod
     def _validate_index(index: int) -> None:
         """Validates the parameter index is usable."""
-        if index in ParamParser._RESERVED_PARAMS:
-            raise ValueError(
-                f"Parameter ${index} is reserved by Jamf Pro and should not be used. "
-                f"Use parameters ${ParamParser._MIN_USABLE_PARAM} - ${ParamParser._MAX_USABLE_PARAM} instead."
-            )
-        if index < ParamParser._MIN_USABLE_PARAM or index > ParamParser._MAX_USABLE_PARAM:
-            raise ValueError(
-                f"Parameter ${index} is out of usable range. "
-                f"Use parameters ${ParamParser._MIN_USABLE_PARAM}-${ParamParser._MAX_USABLE_PARAM}."
-            )
+        JamfParamParser._validate_index(index)
 
     @staticmethod
     def get(index: int) -> str | None:
         """Safely retrieve Jamf parameter by index."""
-        ParamParser._validate_index(index)
-        return sys.argv[index] if len(sys.argv) > index else None
+        return _jamf_parser.get(index)
 
     @staticmethod
     def get_bool(index: int) -> bool:
         """Get a Jamf parameter and convert to boolean."""
-        ParamParser._validate_index(index)
-        value = ParamParser.get(index)
-        if not value:
-            return False
-        return value.strip().lower() in ("true", "1", "yes", "y")
+        return _jamf_parser.get_bool(index)
 
     @staticmethod
     def get_int(index: int, default: int = 0) -> int:
         """Get a Jamf parameter and convert to integer."""
-        ParamParser._validate_index(index)
-        value = ParamParser.get(index)
-        if not value:
-            return default
-        try:
-            return int(value.strip())
-        except ValueError:
-            return default
+        return _jamf_parser.get_int(index, default=default)

@@ -1,17 +1,28 @@
 # pymdm
 
-A Python utility package for MDM deployment scripts, providing common functionality for Jamf Pro policy scripts and system automation.
-
-Designed for use with [MacAdmins Python](https://github.com/macadmins/python) (`#!/usr/local/bin/managed_python3`), which comes pre-shipped with `requests` and other useful packages.
+A Python utility package for macOS MDM deployment scripts, built for [MacAdmins Python](https://github.com/macadmins/python) (`#!/usr/local/bin/managed_python3`) and Jamf Pro workflows. Windows/Intune support is also available for teams managing mixed-platform fleets.
 
 ## Features
 
+- **ParamParser**: Safe parsing of Jamf Pro script parameters 4-11 (macOS)
+- **Dialog**: swiftDialog integration for user-facing dialogs and notifications (macOS)
+- **CommandRunner**: Secure subprocess execution with credential sanitization and platform-aware run-as-user
+- **SystemInfo**: System information helpers — serial number, console user, hostname
 - **MdmLogger**: Structured logging with file output, rotation, and multiple log levels
-- **ParamParser**: Safe parsing of Jamf Pro script parameters (4-11)
-- **CommandRunner**: Secure subprocess execution with credential sanitization
-- **SystemInfo**: System information helpers (serial number, console user, hostname)
 - **WebhookSender**: Send logs and metadata to webhooks
-- **Dialog**: swiftDialog integration for user-facing dialogs and notifications
+- **IntuneParamProvider**: Env var and argv parameter parsing for Intune scripts (Windows)
+
+### Platform Support
+
+| Feature | macOS (Jamf) | Windows (Intune) |
+|---|---|---|
+| ParamParser (Jamf) | Yes | — |
+| Dialog (swiftDialog) | Yes | Graceful no-op |
+| CommandRunner | Yes | Yes |
+| SystemInfo | Yes | Yes |
+| MdmLogger | Yes | Yes |
+| WebhookSender | Yes | Yes |
+| IntuneParamProvider | — | Yes |
 
 ## Installation
 
@@ -24,9 +35,9 @@ uv pip install -e .
 ### Development
 
 ```bash
-make install-dev  # Install with dev dependencies
-make test         # Run tests
-make format       # Format code with black and ruff
+make install     # Install with dev dependencies
+make test        # Run tests
+make format      # Format code with ruff
 ```
 
 ## Quick Start
@@ -47,7 +58,7 @@ logger.warn("Warning message")
 logger.error("Error occurred", exit_code=1)
 ```
 
-### Jamf Parameters
+### Jamf Parameters (macOS)
 
 ```python
 from pymdm import ParamParser
@@ -56,10 +67,40 @@ from pymdm import ParamParser
 webhook_url = ParamParser.get(4)  # $4 in Jamf policy
 
 # Get boolean parameter
-debug_mode = ParamParser.get_bool(5)  # "true", "1", "yes" → True
+debug_mode = ParamParser.get_bool(5)  # "true", "1", "yes" -> True
 
 # Get integer parameter
 timeout = ParamParser.get_int(6, default=30)
+```
+
+### Intune Parameters (Windows)
+
+```python
+from pymdm.mdm import IntuneParamProvider
+
+provider = IntuneParamProvider()
+
+# Get from sys.argv
+value = provider.get(1)
+
+# Get from environment variable
+webhook_url = provider.get("WEBHOOK_URL")
+
+# Boolean from env var
+debug = provider.get_bool("DEBUG_MODE")
+```
+
+### Auto-Detect MDM Provider
+
+```python
+from pymdm.mdm import get_provider
+
+# Automatically selects Jamf on macOS, Intune on Windows
+# Override with PYMDM_MDM_PROVIDER env var
+provider = get_provider()
+
+value = provider.get(4)  # Jamf: sys.argv[4], Intune: sys.argv[4]
+debug = provider.get_bool("DEBUG")  # Intune: env var lookup
 ```
 
 ### Command Execution
@@ -74,6 +115,12 @@ output = runner.run(["/usr/bin/id", "-u", username])
 
 # Shell execution (for pipes, etc.)
 output = runner.run("ps aux | grep python", timeout=10)
+
+# Run as logged-in user (platform-aware)
+# macOS: uses launchctl asuser
+# Windows: uses PowerShell Start-Process
+runner = CommandRunner(logger=logger, username="jsmith", uid=501)
+output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
 ```
 
 ### System Information
@@ -82,13 +129,14 @@ output = runner.run("ps aux | grep python", timeout=10)
 from pymdm import SystemInfo
 
 # Get serial number
+# macOS: system_profiler | Windows: PowerShell/wmic
 serial = SystemInfo.get_serial_number()
 
 # Get console user info
 user_info = SystemInfo.get_console_user()
 if user_info:
     username, uid, home_path = user_info
-    
+
 # Get hostname
 hostname = SystemInfo.get_hostname()
 
@@ -116,7 +164,7 @@ webhook.send(
 )
 ```
 
-## Complete Example
+## Complete Example (macOS / Jamf Pro)
 
 ```python
 #!/usr/local/bin/managed_python3
@@ -143,13 +191,13 @@ try:
     # Get system info
     serial = SystemInfo.get_serial_number()
     hostname = SystemInfo.get_hostname()
-    
+
     logger.info(f"Running on {hostname} ({serial})")
-    
+
     # Execute command
     output = runner.run(["/usr/bin/sw_vers", "-productVersion"])
     logger.info(f"macOS version: {output}")
-    
+
     # Send results
     webhook = WebhookSender(
         url=ParamParser.get(5),
@@ -160,9 +208,101 @@ try:
         serial=serial,
         status="success"
     )
-    
+
 except Exception as e:
     logger.log_exception("Script failed", e, exit_code=1)
+```
+
+## Complete Example (Windows / Intune)
+
+```python
+"""Example Intune deployment script."""
+
+from pymdm import MdmLogger, CommandRunner, SystemInfo, WebhookSender
+from pymdm.mdm import IntuneParamProvider
+
+# Setup
+params = IntuneParamProvider()
+logger = MdmLogger(
+    debug=params.get_bool("DEBUG"),
+    output_path="C:\\ProgramData\\Scripts\\my_script.log"
+)
+runner = CommandRunner(logger=logger)
+
+logger.log_startup("my_script", version="1.0.0")
+
+try:
+    serial = SystemInfo.get_serial_number()
+    hostname = SystemInfo.get_hostname()
+
+    logger.info(f"Running on {hostname} ({serial})")
+
+    # Windows-specific command
+    output = runner.run(["powershell", "-Command", "Get-ComputerInfo | Select-Object OsVersion"])
+    logger.info(f"System info: {output}")
+
+    webhook_url = params.get("WEBHOOK_URL")
+    if webhook_url:
+        webhook = WebhookSender(url=webhook_url, logger=logger)
+        webhook.send(hostname=hostname, serial=serial, status="success")
+
+except Exception as e:
+    logger.log_exception("Script failed", e, exit_code=1)
+```
+
+## Platform Configuration
+
+### Environment Variables
+
+| Variable | Purpose | Values |
+|---|---|---|
+| `PYMDM_PLATFORM` | Override platform auto-detection | `darwin`, `win32` |
+| `PYMDM_MDM_PROVIDER` | Override MDM provider auto-detection | `jamf`, `intune` |
+
+### Task Mapping: Jamf vs Intune
+
+| Jamf Pro | Intune Equivalent | pymdm API |
+|---|---|---|
+| `ParamParser.get(4)` | `IntuneParamProvider().get("PARAM_NAME")` | `get_provider().get(...)` |
+| `ParamParser.get_bool(5)` | `IntuneParamProvider().get_bool("FLAG")` | `get_provider().get_bool(...)` |
+| Script params via `sys.argv[4-11]` | Env vars or `sys.argv` | Provider-specific |
+| `jamf recon` | Microsoft Graph API | Not in pymdm (use provider SDK) |
+| swiftDialog | Windows toast/WPF | `Dialog` (macOS only) |
+
+## Migration Notes
+
+### From pymdm < 0.4.0
+
+All existing imports and APIs are fully backward compatible. No changes required for macOS/Jamf scripts:
+
+```python
+# These all work exactly as before
+from pymdm import SystemInfo, CommandRunner, ParamParser, MdmLogger
+```
+
+For new Windows/Intune scripts, use the new provider APIs:
+
+```python
+from pymdm.mdm import IntuneParamProvider, get_provider
+from pymdm.platforms import get_platform
+```
+
+## Architecture
+
+```
+pymdm/
+├── platforms/          # OS-specific implementations
+│   ├── darwin.py       # macOS: system_profiler, launchctl
+│   └── win32.py        # Windows: PowerShell, wmic, runas
+├── mdm/                # MDM provider implementations
+│   ├── jamf.py         # Jamf Pro: sys.argv[4-11] parsing
+│   └── intune.py       # Intune: env vars, flexible argv
+├── command_runner.py   # Cross-platform subprocess wrapper
+├── dialog.py           # swiftDialog integration (macOS)
+├── logger.py           # Structured logging
+├── param_parser.py     # Backward-compat Jamf parser facade
+├── system_info.py      # Cross-platform system info facade
+└── webhook_sender.py   # HTTP webhook sender
 ```
 
 ## Requirements

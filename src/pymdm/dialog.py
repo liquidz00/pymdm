@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import asdict, dataclass, field, fields
 from enum import Enum, IntEnum
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 # Shared temp directory accessible by all local users on macOS
 _SHARED_TEMP_DIR = "/Users/Shared"
+
 
 _ALIASES = {
     "help_message": "helpmessage",
@@ -636,7 +638,7 @@ class Dialog:
     def __init__(
         self,
         binary_path: str | None = None,
-        temp_dir: str | Path = _SHARED_TEMP_DIR,
+        temp_dir: str | Path | None = None,
         use_temp_file: bool = False,
     ) -> None:
         """
@@ -644,12 +646,15 @@ class Dialog:
 
         :param binary_path: Path to swiftDialog binary, or None to auto-discover
         :type binary_path: str | None, optional
-        :param temp_dir: Directory for temp file creation, defaults to /Users/Shared
-        :type temp_dir: str | Path, optional
+        :param temp_dir: Directory for temp file creation. Defaults to /Users/Shared
+            (the macOS shared temp directory accessible by all local users)
+        :type temp_dir: str | Path | None, optional
         :param use_temp_file: If True, use temp files instead of --jsonstring, defaults to False
         :type use_temp_file: bool, optional
         """
         self.binary_path = binary_path
+        if temp_dir is None:
+            temp_dir = _SHARED_TEMP_DIR
         self.temp_dir = Path(temp_dir) if isinstance(temp_dir, str) else temp_dir
         self.use_temp_file = use_temp_file
 
@@ -658,7 +663,8 @@ class Dialog:
         Find swiftDialog binary in standard locations.
 
         If a binary_path was provided at initialization, returns that path
-        if the file exists. Otherwise, checks standard installation locations.
+        if the file exists. Otherwise, checks the platform-specific standard
+        installation location, then falls back to PATH lookup.
 
         :return: Path to dialog binary or None if not found
         :rtype: str | None
@@ -669,7 +675,7 @@ class Dialog:
                 return self.binary_path
             return None
 
-        # Check standard installation location
+        # Check standard macOS installation location for swiftDialog
         standard_path = "/usr/local/bin/dialog"
         if Path(standard_path).exists():
             return standard_path
@@ -772,6 +778,18 @@ class Dialog:
         from .system_info import SystemInfo
 
         is_notification = isinstance(template, SystemNotification)
+
+        # swiftDialog is macOS-only; guard against Windows callers
+        if sys.platform != "darwin":
+            error_msg = (
+                "swiftDialog is not available on this platform. Dialog functionality is macOS-only."
+            )
+            if logger:
+                logger.warn(error_msg)
+            return DialogReturn(
+                exit_code=DialogExitCode.file_not_found,
+                raw_output=error_msg,
+            )
 
         # Find dialog binary
         dialog_path = self._find_binary()

@@ -55,8 +55,24 @@ class MdmLogger:
         if version:
             self.info(f"Version: {version}")
         self.info(f"Python: {platform.python_version()}")
-        self.info(f"macOS Version: {platform.release()}")
+        self.info(f"{self._get_os_version_label()}")
         self.info(f"{'=' * 50}")
+
+    @staticmethod
+    def _get_os_version_label() -> str:
+        """Get the OS version label from the platform layer.
+
+        Falls back to a generic label if the platform layer is unavailable.
+
+        :return: OS version label string
+        :rtype: str
+        """
+        try:
+            from .platforms._detection import get_platform
+
+            return get_platform().get_os_version_label()
+        except (ImportError, NotImplementedError):
+            return f"OS Version: {platform.release()}"
 
     def update_log(
         self, level: str, message: str, startup: bool = False, exit_code: int | None = None
