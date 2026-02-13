@@ -1,29 +1,28 @@
 # pymdm
 
-A cross-platform Python utility package for MDM deployment scripts, providing common functionality for Jamf Pro, Microsoft Intune, and other endpoint management workflows.
-
-Originally designed for use with [MacAdmins Python](https://github.com/macadmins/python) (`#!/usr/local/bin/managed_python3`), now supports macOS and Windows.
+A Python utility package for macOS MDM deployment scripts, built for [MacAdmins Python](https://github.com/macadmins/python) (`#!/usr/local/bin/managed_python3`) and Jamf Pro workflows. Windows/Intune support is also available for teams managing mixed-platform fleets.
 
 ## Features
 
-- **MdmLogger**: Structured logging with file output, rotation, and multiple log levels
-- **ParamParser**: Safe parsing of MDM script parameters (Jamf Pro parameters 4-11)
-- **CommandRunner**: Secure subprocess execution with credential sanitization and platform-aware run-as-user
-- **SystemInfo**: Cross-platform system information helpers (serial number, console user, hostname)
-- **WebhookSender**: Send logs and metadata to webhooks
+- **ParamParser**: Safe parsing of Jamf Pro script parameters 4-11 (macOS)
 - **Dialog**: swiftDialog integration for user-facing dialogs and notifications (macOS)
+- **CommandRunner**: Secure subprocess execution with credential sanitization and platform-aware run-as-user
+- **SystemInfo**: System information helpers — serial number, console user, hostname
+- **MdmLogger**: Structured logging with file output, rotation, and multiple log levels
+- **WebhookSender**: Send logs and metadata to webhooks
+- **IntuneParamProvider**: Env var and argv parameter parsing for Intune scripts (Windows)
 
-### Cross-Platform Support
+### Platform Support
 
 | Feature | macOS (Jamf) | Windows (Intune) |
 |---|---|---|
-| SystemInfo | Full | Full |
-| CommandRunner | Full | Full |
-| MdmLogger | Full | Full |
-| WebhookSender | Full | Full |
-| ParamParser (Jamf) | Full | N/A |
-| IntuneParamProvider | N/A | Full |
-| Dialog (swiftDialog) | Full | Graceful error |
+| ParamParser (Jamf) | Yes | — |
+| Dialog (swiftDialog) | Yes | Graceful no-op |
+| CommandRunner | Yes | Yes |
+| SystemInfo | Yes | Yes |
+| MdmLogger | Yes | Yes |
+| WebhookSender | Yes | Yes |
+| IntuneParamProvider | — | Yes |
 
 ## Installation
 
@@ -129,11 +128,11 @@ output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
 ```python
 from pymdm import SystemInfo
 
-# Get serial number (cross-platform)
+# Get serial number
 # macOS: system_profiler | Windows: PowerShell/wmic
 serial = SystemInfo.get_serial_number()
 
-# Get console user info (cross-platform)
+# Get console user info
 user_info = SystemInfo.get_console_user()
 if user_info:
     username, uid, home_path = user_info
