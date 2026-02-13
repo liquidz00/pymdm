@@ -1,7 +1,15 @@
+"""
+Safe subprocess execution with logging support.
+
+Provides the CommandRunner class for running shell commands with credential
+sanitization, timeout handling, and platform-aware run-as-user support.
+"""
+
 import re
 import subprocess
 
 from .logger import MdmLogger
+from .platforms._detection import get_command_support
 
 
 class CommandRunner:
@@ -28,21 +36,15 @@ class CommandRunner:
         """
         Validates user information passed is both present and accurate.
 
-        Method will return False if:
-            - Username and UID are both None
-            - Username contains invalid characters
-            - UID is less than 500 (non-system accounts are created with UIDs higher than 500)
+        Delegates to the platform-specific implementation which checks:
+            - Username and UID are both present
+            - Username contains only valid characters
+            - UID meets platform-specific minimum (500 on macOS, 1000 on Linux)
 
         :return: True if validation is successful, False otherwise
         :rtype: bool
         """
-        if self.username is None or self.uid is None:
-            return False
-        if self.username is not None and not re.match(r"^[a-zA-z0-9_-]+$", self.username):
-            return False
-        if self.uid is not None and self.uid < 500:
-            return False
-        return True
+        return get_command_support().validate_user(self.username, self.uid)
 
     @staticmethod
     def _sanitize_command(command: str | list[str]) -> str:
@@ -108,6 +110,11 @@ class CommandRunner:
         """
         Run a command as the logged in user and return its output.
 
+        Uses platform-specific mechanisms:
+        - macOS: ``launchctl asuser`` + ``sudo -u``
+        - Linux: ``sudo -u``
+        - Windows: PowerShell ``Start-Process -Credential``
+
         :param command: Command string or list of arguments
         :type command: list[str]
         :param timeout: Timeout in seconds, defaults to 30
@@ -127,11 +134,11 @@ class CommandRunner:
                 f"Running: {self._sanitize_command(command)} as the logged in user {self.username} (UID: {self.uid})"
             )
 
+        # Delegate to platform-specific command wrapping
+        platform_cmd = get_command_support().run_as_user_command(command, self.username, self.uid)
+
         try:
-            return self.run(
-                ["/bin/launchctl", "asuser", str(self.uid), "sudo", "-u", self.username, *command],
-                timeout=timeout,
-            )
+            return self.run(platform_cmd, timeout=timeout)
         except subprocess.CalledProcessError as e:
             if self.logger:
                 self.logger.error(f"Command failed: {e.stderr}")
