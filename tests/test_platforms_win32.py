@@ -172,5 +172,3 @@ class TestWin32CommandSupport:
         assert result[0] == "powershell"
         assert "-NoProfile" in result
         assert "testuser" in " ".join(result)
-
-

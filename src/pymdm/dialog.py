@@ -782,8 +782,7 @@ class Dialog:
         # swiftDialog is macOS-only; guard against Windows callers
         if sys.platform != "darwin":
             error_msg = (
-                "swiftDialog is not available on this platform. "
-                "Dialog functionality is macOS-only."
+                "swiftDialog is not available on this platform. Dialog functionality is macOS-only."
             )
             if logger:
                 logger.warn(error_msg)
