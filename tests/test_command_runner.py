@@ -101,6 +101,35 @@ def test_sanitize_command_string():
 
 
 @patch("subprocess.run")
+def test_run_with_env(mock_run):
+    """Test running command with custom environment."""
+    mock_result = Mock()
+    mock_result.stdout = "output\n"
+    mock_result.returncode = 0
+    mock_run.return_value = mock_result
+
+    env = {"PATH": "/usr/bin:/bin", "CUSTOM_VAR": "value"}
+    runner = CommandRunner()
+    runner.run(["/usr/bin/echo", "hello"], env=env)
+
+    assert mock_run.call_args.kwargs["env"] is env
+
+
+@patch("subprocess.run")
+def test_run_without_env(mock_run):
+    """Test that env defaults to None (inherit parent environment)."""
+    mock_result = Mock()
+    mock_result.stdout = "output\n"
+    mock_result.returncode = 0
+    mock_run.return_value = mock_result
+
+    runner = CommandRunner()
+    runner.run(["/usr/bin/echo", "hello"])
+
+    assert mock_run.call_args.kwargs["env"] is None
+
+
+@patch("subprocess.run")
 def test_run_with_logger(mock_run, capsys):
     """Test command runner with logger."""
     mock_result = Mock()

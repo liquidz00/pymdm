@@ -73,7 +73,12 @@ class CommandRunner:
 
         return sanitized
 
-    def run(self, command: str | list[str], timeout: int = 30) -> str:
+    def run(
+        self,
+        command: str | list[str],
+        timeout: int = 30,
+        env: dict[str, str] | None = None,
+    ) -> str:
         """
         Run a command and return its output.
 
@@ -84,6 +89,10 @@ class CommandRunner:
         :type command: str | list[str]
         :param timeout: Timeout in seconds, defaults to 30
         :type timeout: int, optional
+        :param env: Environment variables for the subprocess. Replaces the entire
+            environment (same behavior as subprocess.run). None inherits the parent
+            process environment.
+        :type env: dict[str, str] | None, optional
         :return: Command output (stdout)
         :rtype: str
         """
@@ -94,7 +103,13 @@ class CommandRunner:
 
         try:
             result = subprocess.run(
-                command, capture_output=True, text=True, timeout=timeout, check=True, shell=shell
+                command,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=True,
+                shell=shell,
+                env=env,
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
