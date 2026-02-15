@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.1] - 2026-02-15
+
+### Added
+
+- `env` parameter on `CommandRunner.run()` for passing custom environment variables to subprocesses
+
 ## [v0.4.0] - 2026-02-13
 
 ### Added
