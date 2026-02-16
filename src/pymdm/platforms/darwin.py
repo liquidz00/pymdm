@@ -158,7 +158,7 @@ class DarwinCommandSupport:
         """
         if username is None or uid is None:
             return False
-        if not re.match(r"^[a-zA-z0-9_-]+$", username):
+        if not re.match(r"^[a-zA-Z0-9._-]+$", username):
             return False
         if uid < self.min_user_uid:
             return False

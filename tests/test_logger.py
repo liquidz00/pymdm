@@ -1,3 +1,5 @@
+import pytest
+
 from pymdm import MdmLogger
 
 
@@ -117,3 +119,27 @@ def test_logger_log_exception(capsys):
     assert "Something went wrong" in captured.err
     assert "ValueError: Test error" in captured.err
     assert "Traceback" in captured.err
+
+
+@pytest.mark.parametrize(
+    "method,kwargs",
+    [
+        ("error", {"message": "fatal", "exit_code": 1}),
+        ("warn", {"message": "bad", "exit_code": 2}),
+        ("debug", {"message": "dbg", "exit_code": 3}),
+    ],
+)
+def test_logger_exit_code_forwarding(method, kwargs):
+    """Test that error/warn/debug forward exit_code to sys.exit."""
+    logger = MdmLogger(debug=True)
+    with pytest.raises(SystemExit) as exc_info:
+        getattr(logger, method)(**kwargs)
+    assert exc_info.value.code == kwargs["exit_code"]
+
+
+def test_logger_log_exception_exit_code():
+    """Test that log_exception forwards exit_code to sys.exit."""
+    logger = MdmLogger()
+    with pytest.raises(SystemExit) as exc_info:
+        logger.log_exception("boom", ValueError("err"), exit_code=4)
+    assert exc_info.value.code == 4

@@ -124,7 +124,7 @@ class MdmLogger:
 
     def debug(self, message: str, exit_code: int | None = None) -> None:
         """Log a DEBUG message."""
-        self.update_log("debug", message, exit_code)
+        self.update_log("debug", message, exit_code=exit_code)
 
     def info(
         self, message: str, startup: bool | None = False, exit_code: int | None = None
@@ -134,11 +134,11 @@ class MdmLogger:
 
     def warn(self, message: str, exit_code: int | None = None) -> None:
         """Log a WARN message."""
-        self.update_log("warn", message, exit_code)
+        self.update_log("warn", message, exit_code=exit_code)
 
     def error(self, message: str, exit_code: int | None = None) -> None:
         """Log an ERROR message."""
-        self.update_log("error", message, exit_code)
+        self.update_log("error", message, exit_code=exit_code)
 
     def get_log_path(self) -> Path | None:
         """Return the log file path if configured."""
@@ -153,4 +153,4 @@ class MdmLogger:
         """Log an exception with full traceback."""
         tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         full_message = f"{message}\n{tb}"
-        self.update_log("error", full_message, exit_code)
+        self.update_log("error", full_message, exit_code=exit_code)

@@ -187,3 +187,4 @@ class TestDarwinCommandSupport:
         support = DarwinCommandSupport()
         assert support.validate_user("test-user", 501) is True
         assert support.validate_user("test_user", 501) is True
+        assert support.validate_user("first.last", 501) is True

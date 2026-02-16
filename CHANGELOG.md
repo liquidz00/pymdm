@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.2] - 2026-02-16
+
+### Fixed
+
+- Logger methods `error()`, `warn()`, `debug()`, and `log_exception()` now correctly forward `exit_code` to `update_log()` (was silently landing on `startup` parameter since v0.4.0)
+- Darwin username validation regex now accepts `.` (period) in usernames
+
 ## [v0.4.1] - 2026-02-15
 
 ### Added
