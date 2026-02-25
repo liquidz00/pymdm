@@ -180,7 +180,7 @@ class TestDarwinCommandSupport:
         """Test that invalid username characters fail validation."""
         support = DarwinCommandSupport()
         assert support.validate_user("test user", 501) is False
-        assert support.validate_user("test@user", 501) is False
+        assert support.validate_user("test;user", 501) is False
 
     def test_validate_user_valid_special_chars(self) -> None:
         """Test that allowed special characters pass validation."""
@@ -188,3 +188,4 @@ class TestDarwinCommandSupport:
         assert support.validate_user("test-user", 501) is True
         assert support.validate_user("test_user", 501) is True
         assert support.validate_user("first.last", 501) is True
+        assert support.validate_user("user@domain.com", 501) is True

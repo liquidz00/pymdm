@@ -138,9 +138,11 @@ class CommandRunner:
         """
         if not self._validate_user():
             if self.logger:
-                self.logger.error("Cannot run as user: username and uid are both required")
+                self.logger.error(
+                    f"User validation failed (username={self.username!r}, uid={self.uid!r})"
+                )
             raise ValueError(
-                "run_as_user requires both username and uid to be set on CommandRunner"
+                f"run_as_user validation failed for username={self.username!r}, uid={self.uid!r}"
             )
 
         if self.logger:
