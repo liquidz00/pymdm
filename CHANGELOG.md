@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.3] - 2026-02-25
+
+### Fixed
+
+- Darwin username validation regex now accepts `@` in usernames (e.g. `user@domain.com`)
+- `run_as_user` error messages now include actual username and uid values for easier debugging
+
 ## [v0.4.2] - 2026-02-16
 
 ### Fixed
