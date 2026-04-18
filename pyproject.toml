@@ -8,11 +8,22 @@ authors = [{ name = "Andrew Lerman", email="info@liquidzoo.io" }]
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
+requests = [
+    "requests>=2.32.5",
+]
+docs = [
+    "myst-parser",
+    "sphinx>=7.3.7",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinx-iconify>=0.2.1",
+    "shibuya>=2025.11.10",
+]
 dev = [
     "build",
+    "pymdm[requests,docs]",
     "pytest>=8.2.2",
     "pytest-cov>=7.0.0",
-    "requests>=2.32.5",
     "ruff>=0.5.1",
 ]
 

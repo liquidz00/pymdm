@@ -19,7 +19,7 @@ clean:
 	find . -name "__pycache__" -delete
 
 flush:
-	rm -rf build/ dist/ src/*.egg-info **/__pycache__ .coverage .pytest_cache/ .ruff_cache/ htmlcov/
+	rm -rf build/ dist/ src/*.egg-info **/__pycache__ .coverage .pytest_cache/ .ruff_cache/ htmlcov/ docs/_build/
 
 lint:
 	$(UV) run ruff format --check .
@@ -48,6 +48,9 @@ test-cov-html:
 	@echo "Generating HTML coverage report..."
 	$(UV) run pytest tests/ --cov=src --cov-report=html
 	@echo "Coverage report generated in htmlcov/index.html"
+
+docs: install
+	$(UV) run sphinx-build -b html docs/ docs/_build/
 
 build:
 	$(UV) build --sdist --wheel
