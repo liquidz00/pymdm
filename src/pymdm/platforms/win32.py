@@ -1,8 +1,9 @@
 """
 Windows (win32) platform implementation.
 
-Provides system information retrieval and command execution support
-using Windows-specific tools: PowerShell, wmic, net user, runas.
+Provides system information retrieval, command execution support,
+registry management, and Windows service management using
+Windows-specific tools: PowerShell, wmic, net user, runas, sc.exe, winreg.
 """
 
 from __future__ import annotations
@@ -230,3 +231,184 @@ class Win32CommandSupport:
         if not re.match(r"^[a-zA-Z0-9._\- ]+$", username):
             return False
         return True
+
+
+class Win32Registry:
+    """Read, write, and delete Windows registry values.
+
+    Wraps the ``winreg`` stdlib module for non-raising registry operations.
+    Hive constants are exposed as class attributes for convenience.
+
+    :Example:
+
+        >>> val = Win32Registry.read(
+        ...     Win32Registry.HKLM,
+        ...     r"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+        ...     "ProductName",
+        ... )
+    """
+
+    HKCR: int = 0x80000000
+    HKCU: int = 0x80000001
+    HKLM: int = 0x80000002
+    HKU: int = 0x80000003
+
+    REG_SZ: int = 1
+    REG_EXPAND_SZ: int = 2
+    REG_BINARY: int = 3
+    REG_DWORD: int = 4
+    REG_MULTI_SZ: int = 7
+    REG_QWORD: int = 11
+
+    @staticmethod
+    def read(hive: int, subkey: str, value_name: str) -> str | int | bytes | None:
+        """Read a registry value.
+
+        :param hive: Registry hive (e.g., Win32Registry.HKLM)
+        :type hive: int
+        :param subkey: Registry subkey path
+        :type subkey: str
+        :param value_name: Name of the value to read
+        :type value_name: str
+        :return: Value, or None if the key/value doesn't exist
+        :rtype: str | int | bytes | None
+        """
+        try:
+            import winreg
+
+            with winreg.OpenKey(hive, subkey) as key:
+                value, _ = winreg.QueryValueEx(key, value_name)
+                return value
+        except (OSError, ImportError):
+            return None
+
+    @staticmethod
+    def write(
+        hive: int,
+        subkey: str,
+        value_name: str,
+        value: str | int,
+        value_type: int | None = None,
+    ) -> bool:
+        """Write a registry value. Creates the subkey if it doesn't exist.
+
+        :param hive: Registry hive (e.g., Win32Registry.HKLM)
+        :type hive: int
+        :param subkey: Registry subkey path
+        :type subkey: str
+        :param value_name: Name of the value to write
+        :type value_name: str
+        :param value: Value to set
+        :type value: str | int
+        :param value_type: Registry type (e.g., Win32Registry.REG_SZ).
+            Auto-detected from value type if omitted.
+        :type value_type: int | None
+        :return: True if successful
+        :rtype: bool
+        """
+        try:
+            import winreg
+
+            if value_type is None:
+                value_type = winreg.REG_SZ if isinstance(value, str) else winreg.REG_DWORD
+            with winreg.CreateKeyEx(hive, subkey) as key:
+                winreg.SetValueEx(key, value_name, 0, value_type, value)
+            return True
+        except (OSError, ImportError):
+            return False
+
+    @staticmethod
+    def delete(hive: int, subkey: str, value_name: str) -> bool:
+        """Delete a registry value.
+
+        :param hive: Registry hive (e.g., Win32Registry.HKLM)
+        :type hive: int
+        :param subkey: Registry subkey path
+        :type subkey: str
+        :param value_name: Name of the value to delete
+        :type value_name: str
+        :return: True if deleted, False if missing or failed
+        :rtype: bool
+        """
+        try:
+            import winreg
+
+            with winreg.OpenKey(hive, subkey, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, value_name)
+            return True
+        except (OSError, ImportError):
+            return False
+
+
+class Win32ServiceManager:
+    """Manage Windows services via ``sc.exe``.
+
+    :Example:
+
+        >>> if Win32ServiceManager.is_running("CrowdStrike Falcon"):
+        ...     Win32ServiceManager.stop("CrowdStrike Falcon")
+    """
+
+    @staticmethod
+    def is_running(service_name: str) -> bool:
+        """Check if a Windows service is running.
+
+        :param service_name: Service name
+        :type service_name: str
+        :return: True if the service is currently running
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["sc", "query", service_name],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0 and "RUNNING" in result.stdout
+
+    @staticmethod
+    def stop(service_name: str) -> bool:
+        """Stop a Windows service.
+
+        :param service_name: Service name
+        :type service_name: str
+        :return: True if successfully stopped
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["sc", "stop", service_name],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+    @staticmethod
+    def start(service_name: str) -> bool:
+        """Start a Windows service.
+
+        :param service_name: Service name
+        :type service_name: str
+        :return: True if successfully started
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["sc", "start", service_name],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+    @staticmethod
+    def delete(service_name: str) -> bool:
+        """Delete (remove) a Windows service.
+
+        :param service_name: Service name
+        :type service_name: str
+        :return: True if successfully deleted
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["sc", "delete", service_name],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
