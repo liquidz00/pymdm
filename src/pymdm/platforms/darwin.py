@@ -1,8 +1,9 @@
 """
 macOS (Darwin) platform implementation.
 
-Provides system information retrieval and command execution support
-using macOS-specific tools: system_profiler, stat, id, launchctl.
+Provides system information retrieval, command execution support,
+defaults (plist) management, and launchd service management
+using macOS-specific tools: system_profiler, stat, id, defaults, launchctl.
 """
 
 from __future__ import annotations
@@ -163,3 +164,141 @@ class DarwinCommandSupport:
         if uid < self.min_user_uid:
             return False
         return True
+
+
+class DarwinDefaults:
+    """Read, write, and delete macOS user defaults (plist) values.
+
+    Wraps ``/usr/bin/defaults`` for non-raising plist operations.
+    All methods return None or False on failure instead of raising.
+
+    :Example:
+
+        >>> val = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+        >>> if val is not None:
+        ...     print(f"Value: {val}")
+    """
+
+    @staticmethod
+    def read(domain: str, key: str) -> str | None:
+        """Read a defaults value by domain and key.
+
+        :param domain: The plist domain (e.g., "com.apple.finder")
+        :type domain: str
+        :param key: The key to read
+        :type key: str
+        :return: Value as string, or None if the key doesn't exist
+        :rtype: str | None
+        """
+        result = subprocess.run(
+            ["/usr/bin/defaults", "read", domain, key],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip()
+
+    @staticmethod
+    def write(domain: str, key: str, value: str, value_type: str = "-string") -> bool:
+        """Write a defaults value.
+
+        :param domain: The plist domain
+        :type domain: str
+        :param key: The key to write
+        :type key: str
+        :param value: The value to set
+        :type value: str
+        :param value_type: defaults type flag (e.g., "-string", "-int", "-bool", "-float")
+        :type value_type: str
+        :return: True if successful
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["/usr/bin/defaults", "write", domain, key, value_type, str(value)],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+    @staticmethod
+    def delete(domain: str, key: str) -> bool:
+        """Delete a defaults key.
+
+        :param domain: The plist domain
+        :type domain: str
+        :param key: The key to delete
+        :type key: str
+        :return: True if deleted, False if missing or failed
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["/usr/bin/defaults", "delete", domain, key],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+
+class DarwinServiceManager:
+    """Manage launchd services on macOS.
+
+    Wraps ``/bin/launchctl`` for checking, loading, and unloading services.
+    Targets use the launchctl domain-target format:
+    ``system/com.example.daemon`` or ``gui/<uid>/com.example.agent``.
+
+    :Example:
+
+        >>> if DarwinServiceManager.is_loaded("system/com.example.daemon"):
+        ...     DarwinServiceManager.bootout("system/com.example.daemon")
+    """
+
+    @staticmethod
+    def is_loaded(target: str) -> bool:
+        """Check if a launchd service is loaded.
+
+        :param target: Service target (e.g., "system/com.example.daemon")
+        :type target: str
+        :return: True if the service is loaded
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["/bin/launchctl", "print", target],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+    @staticmethod
+    def bootout(target: str) -> bool:
+        """Unload a launchd service.
+
+        :param target: Service target (e.g., "system/com.example.daemon")
+        :type target: str
+        :return: True if successfully unloaded
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["/bin/launchctl", "bootout", target],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+    @staticmethod
+    def bootstrap(domain_target: str, plist_path: str) -> bool:
+        """Load a launchd service from a plist.
+
+        :param domain_target: Domain target (e.g., "system" or "gui/501")
+        :type domain_target: str
+        :param plist_path: Path to the launchd plist file
+        :type plist_path: str
+        :return: True if successfully loaded
+        :rtype: bool
+        """
+        result = subprocess.run(
+            ["/bin/launchctl", "bootstrap", domain_target, plist_path],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0

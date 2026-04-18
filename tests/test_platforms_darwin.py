@@ -9,7 +9,9 @@ from unittest.mock import Mock, patch
 
 from pymdm.platforms.darwin import (
     DarwinCommandSupport,
+    DarwinDefaults,
     DarwinPlatformInfo,
+    DarwinServiceManager,
 )
 
 if TYPE_CHECKING:
@@ -189,3 +191,114 @@ class TestDarwinCommandSupport:
         assert support.validate_user("test_user", 501) is True
         assert support.validate_user("first.last", 501) is True
         assert support.validate_user("user@domain.com", 501) is True
+
+
+class TestDarwinDefaults:
+    """Tests for DarwinDefaults plist operations."""
+
+    @patch("subprocess.run")
+    def test_read_existing_key(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0, stdout="1\n")
+        result = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+        assert result == "1"
+        assert mock_run.call_args[0][0] == [
+            "/usr/bin/defaults",
+            "read",
+            "com.apple.finder",
+            "ShowHardDrivesOnDesktop",
+        ]
+
+    @patch("subprocess.run")
+    def test_read_missing_key(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=1, stdout="")
+        result = DarwinDefaults.read("com.apple.finder", "NonexistentKey")
+        assert result is None
+
+    @patch("subprocess.run")
+    def test_write_string(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0)
+        result = DarwinDefaults.write("com.example.app", "Setting", "value")
+        assert result is True
+        assert mock_run.call_args[0][0] == [
+            "/usr/bin/defaults",
+            "write",
+            "com.example.app",
+            "Setting",
+            "-string",
+            "value",
+        ]
+
+    @patch("subprocess.run")
+    def test_write_bool(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0)
+        result = DarwinDefaults.write("com.example.app", "Enabled", "true", "-bool")
+        assert result is True
+        assert "-bool" in mock_run.call_args[0][0]
+
+    @patch("subprocess.run")
+    def test_write_failure(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=1)
+        result = DarwinDefaults.write("com.example.app", "Setting", "value")
+        assert result is False
+
+    @patch("subprocess.run")
+    def test_delete_existing(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0)
+        result = DarwinDefaults.delete("com.example.app", "Setting")
+        assert result is True
+
+    @patch("subprocess.run")
+    def test_delete_missing(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=1)
+        result = DarwinDefaults.delete("com.example.app", "NonexistentKey")
+        assert result is False
+
+
+class TestDarwinServiceManager:
+    """Tests for DarwinServiceManager launchctl operations."""
+
+    @patch("subprocess.run")
+    def test_is_loaded_true(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0)
+        assert DarwinServiceManager.is_loaded("system/com.example.daemon") is True
+        assert mock_run.call_args[0][0] == ["/bin/launchctl", "print", "system/com.example.daemon"]
+
+    @patch("subprocess.run")
+    def test_is_loaded_false(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=113)
+        assert DarwinServiceManager.is_loaded("system/com.example.daemon") is False
+
+    @patch("subprocess.run")
+    def test_bootout_success(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0)
+        assert DarwinServiceManager.bootout("system/com.example.daemon") is True
+        assert mock_run.call_args[0][0] == [
+            "/bin/launchctl",
+            "bootout",
+            "system/com.example.daemon",
+        ]
+
+    @patch("subprocess.run")
+    def test_bootout_failure(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=3)
+        assert DarwinServiceManager.bootout("system/com.example.daemon") is False
+
+    @patch("subprocess.run")
+    def test_bootstrap_success(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=0)
+        result = DarwinServiceManager.bootstrap(
+            "system", "/Library/LaunchDaemons/com.example.daemon.plist"
+        )
+        assert result is True
+        assert mock_run.call_args[0][0] == [
+            "/bin/launchctl",
+            "bootstrap",
+            "system",
+            "/Library/LaunchDaemons/com.example.daemon.plist",
+        ]
+
+    @patch("subprocess.run")
+    def test_bootstrap_failure(self, mock_run: Mock) -> None:
+        mock_run.return_value = Mock(returncode=1)
+        result = DarwinServiceManager.bootstrap("system", "/nonexistent.plist")
+        assert result is False
