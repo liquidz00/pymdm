@@ -10,6 +10,14 @@ def test_webhook_sender_initialization(mock_logger):
     assert sender.url == "https://example.com"
     assert sender.logger == mock_logger
     assert sender.logfile is None
+    assert sender.headers is None
+
+
+def test_webhook_sender_with_headers(mock_logger):
+    """Test WebhookSender initialization with custom headers."""
+    headers = {"Authorization": "Bearer test-token"}
+    sender = WebhookSender(url="https://example.com", logger=mock_logger, headers=headers)
+    assert sender.headers == headers
 
 
 def test_webhook_sender_with_logfile(mock_logger, temp_log_file):
@@ -78,3 +86,45 @@ def test_webhook_send_missing_logfile(mock_logger):
 
     result = sender.send()
     assert result is False
+
+
+@patch("requests.post")
+def test_webhook_send_with_headers(mock_post, mock_logger, temp_log_file):
+    """Test that custom headers are passed through to requests.post."""
+    temp_log_file.write_text("Test log content")
+
+    mock_response = Mock()
+    mock_response.ok = True
+    mock_response.status_code = 200
+    mock_post.return_value = mock_response
+
+    headers = {"Authorization": "Bearer test-token", "X-Custom": "value"}
+    sender = WebhookSender(
+        url="https://example.com", logger=mock_logger, logfile=temp_log_file, headers=headers
+    )
+
+    result = sender.send(hostname="test-host")
+
+    assert result is True
+    assert mock_post.call_args.kwargs["headers"] is headers
+
+
+@patch("requests.post")
+def test_webhook_send_logfile_with_headers(mock_post, mock_logger, temp_log_file):
+    """Test that custom headers are passed through on send_logfile."""
+    temp_log_file.write_text("Test log content")
+
+    mock_response = Mock()
+    mock_response.ok = True
+    mock_response.status_code = 200
+    mock_post.return_value = mock_response
+
+    headers = {"Authorization": "Bearer test-token"}
+    sender = WebhookSender(
+        url="https://example.com", logger=mock_logger, logfile=temp_log_file, headers=headers
+    )
+
+    result = sender.send_logfile(hostname="test-host")
+
+    assert result is True
+    assert mock_post.call_args.kwargs["headers"] is headers
