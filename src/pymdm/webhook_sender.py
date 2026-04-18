@@ -10,7 +10,13 @@ from .logger import MdmLogger
 class WebhookSender:
     """Helper class for sending log files to Tray webhooks."""
 
-    def __init__(self, url: str, logger: MdmLogger, logfile: Path | str | None = None):
+    def __init__(
+        self,
+        url: str,
+        logger: MdmLogger,
+        logfile: Path | str | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         """
         Initialize WebhookSender.
 
@@ -20,11 +26,13 @@ class WebhookSender:
         :type logger: MdmLogger
         :param logfile: Path to log file to send, defaults to None
         :type logfile: Path | str | None, optional
+        :param headers: Optional HTTP headers to include in requests (e.g., for authentication)
+        :type headers: dict[str, str] | None, optional
         """
         self.url = url
         self.logger = logger
-        # Use provided logfile, or fall back to logger's output_path
         self.logfile = Path(logfile) if logfile else logger.get_log_path()
+        self.headers = headers
 
     def send_logfile(self, **metadata: Any) -> bool:
         """
@@ -48,7 +56,9 @@ class WebhookSender:
             with open(self.logfile, "rb") as f:
                 files = {"logfile": (self.logfile.name, f, "text/plain")}
 
-                response = requests.post(self.url, data=metadata, files=files, timeout=30)
+                response = requests.post(
+                    self.url, data=metadata, files=files, headers=self.headers, timeout=30
+                )
 
                 if response.ok:
                     self.logger.info(
@@ -82,7 +92,7 @@ class WebhookSender:
         self.logger.info(f"Sending data to webhook URL ending in: {self.url[-8:]}")
 
         try:
-            response = requests.post(self.url, json=metadata, timeout=30)
+            response = requests.post(self.url, json=metadata, headers=self.headers, timeout=30)
 
             if response.ok:
                 self.logger.info(

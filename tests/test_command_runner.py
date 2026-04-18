@@ -1,3 +1,4 @@
+import subprocess
 from unittest.mock import Mock, patch
 
 import pytest
@@ -50,8 +51,6 @@ def test_run_with_string(mock_run):
 @patch("subprocess.run")
 def test_run_with_timeout(mock_run):
     """Test command timeout handling."""
-    import subprocess
-
     mock_run.side_effect = subprocess.TimeoutExpired("cmd", 10)
 
     runner = CommandRunner()
@@ -63,8 +62,6 @@ def test_run_with_timeout(mock_run):
 @patch("subprocess.run")
 def test_run_with_error(mock_run):
     """Test command error handling."""
-    import subprocess
-
     mock_run.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="error")
 
     runner = CommandRunner()
@@ -141,5 +138,97 @@ def test_run_with_logger(mock_run, capsys):
     runner = CommandRunner(logger=logger)
     runner.run(["/bin/echo", "hello"])
 
+    captured = capsys.readouterr()
+    assert "Running:" in captured.out
+
+
+@patch("subprocess.run")
+def test_run_check_false_returns_completed_process(mock_run):
+    """check=False returns CompletedProcess instead of str."""
+    mock_result = Mock(spec=subprocess.CompletedProcess)
+    mock_result.stdout = "output\n"
+    mock_result.returncode = 0
+    mock_run.return_value = mock_result
+
+    runner = CommandRunner()
+    result = runner.run(["/bin/echo", "hello"], check=False)
+
+    assert result is mock_result
+    assert mock_run.call_args.kwargs["check"] is False
+
+
+@patch("subprocess.run")
+def test_run_check_false_no_raise_on_nonzero(mock_run):
+    """check=False does not raise on non-zero exit code."""
+    mock_result = Mock(spec=subprocess.CompletedProcess)
+    mock_result.stdout = ""
+    mock_result.stderr = "not found\n"
+    mock_result.returncode = 1
+    mock_run.return_value = mock_result
+
+    runner = CommandRunner()
+    result = runner.run(["/usr/bin/pgrep", "nonexistent"], check=False)
+
+    assert result.returncode == 1
+    assert result.stderr == "not found\n"
+
+
+@patch("subprocess.run")
+def test_run_check_true_still_returns_str(mock_run):
+    """check=True (default) still returns stripped stdout string."""
+    mock_result = Mock()
+    mock_result.stdout = "  hello world  \n"
+    mock_result.returncode = 0
+    mock_run.return_value = mock_result
+
+    runner = CommandRunner()
+    result = runner.run(["/bin/echo", "hello world"])
+
+    assert result == "hello world"
+    assert isinstance(result, str)
+    assert mock_run.call_args.kwargs["check"] is True
+
+
+@patch("subprocess.run")
+def test_run_kwargs_passthrough(mock_run):
+    """Extra kwargs are passed through to subprocess.run."""
+    mock_result = Mock()
+    mock_result.stdout = "output\n"
+    mock_result.returncode = 0
+    mock_run.return_value = mock_result
+
+    runner = CommandRunner()
+    runner.run(["/usr/bin/scutil"], input="show State:/Users/ConsoleUser\n")
+
+    assert mock_run.call_args.kwargs["input"] == "show State:/Users/ConsoleUser\n"
+
+
+@patch("subprocess.run")
+def test_run_kwargs_cwd(mock_run):
+    """cwd kwarg is passed through to subprocess.run."""
+    mock_result = Mock()
+    mock_result.stdout = "output\n"
+    mock_result.returncode = 0
+    mock_run.return_value = mock_result
+
+    runner = CommandRunner()
+    runner.run(["/bin/ls"], cwd="/tmp")
+
+    assert mock_run.call_args.kwargs["cwd"] == "/tmp"
+
+
+@patch("subprocess.run")
+def test_run_check_false_with_logger(mock_run, capsys):
+    """check=False still logs the command when logger is present."""
+    mock_result = Mock(spec=subprocess.CompletedProcess)
+    mock_result.stdout = ""
+    mock_result.returncode = 1
+    mock_run.return_value = mock_result
+
+    logger = MdmLogger(debug=True)
+    runner = CommandRunner(logger=logger)
+    result = runner.run(["/usr/bin/pgrep", "test"], check=False)
+
+    assert result.returncode == 1
     captured = capsys.readouterr()
     assert "Running:" in captured.out

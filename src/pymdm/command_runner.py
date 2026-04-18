@@ -5,8 +5,11 @@ Provides the CommandRunner class for running shell commands with credential
 sanitization, timeout handling, and platform-aware run-as-user support.
 """
 
+from __future__ import annotations
+
 import re
 import subprocess
+from typing import Any, Literal, overload
 
 from .logger import MdmLogger
 from .platforms._detection import get_command_support
@@ -73,17 +76,49 @@ class CommandRunner:
 
         return sanitized
 
+    @overload
     def run(
         self,
         command: str | list[str],
         timeout: int = 30,
         env: dict[str, str] | None = None,
-    ) -> str:
+        *,
+        check: Literal[True] = ...,
+        **kwargs: Any,
+    ) -> str: ...
+
+    @overload
+    def run(
+        self,
+        command: str | list[str],
+        timeout: int = 30,
+        env: dict[str, str] | None = None,
+        *,
+        check: Literal[False],
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+    def run(
+        self,
+        command: str | list[str],
+        timeout: int = 30,
+        env: dict[str, str] | None = None,
+        *,
+        check: bool = True,
+        **kwargs: Any,
+    ) -> str | subprocess.CompletedProcess[str]:
         """
         Run a command and return its output.
 
         - Pass a list for safety: ["/usr/bin/id", "-u", username]
         - Pass a string for shell features: "command | grep something"
+
+        When ``check=True`` (default), returns stripped stdout as a string and
+        raises on non-zero exit. When ``check=False``, returns the full
+        ``subprocess.CompletedProcess`` for caller inspection.
+
+        Additional keyword arguments are passed through to ``subprocess.run``
+        (e.g., ``cwd``, ``input``).
 
         :param command: Command string or list of arguments
         :type command: str | list[str]
@@ -93,8 +128,12 @@ class CommandRunner:
             environment (same behavior as subprocess.run). None inherits the parent
             process environment.
         :type env: dict[str, str] | None, optional
-        :return: Command output (stdout)
-        :rtype: str
+        :param check: If True (default), raise CalledProcessError on non-zero exit
+            and return stdout as str. If False, return the CompletedProcess object.
+        :type check: bool, optional
+        :param kwargs: Additional keyword arguments passed to subprocess.run
+        :return: Command output (stdout) when check=True, or CompletedProcess when check=False
+        :rtype: str | subprocess.CompletedProcess[str]
         """
         shell = isinstance(command, str)
 
@@ -107,11 +146,14 @@ class CommandRunner:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                check=True,
+                check=check,
                 shell=shell,
                 env=env,
+                **kwargs,
             )
-            return result.stdout.strip()
+            if check:
+                return result.stdout.strip()
+            return result
         except subprocess.CalledProcessError as e:
             if self.logger:
                 self.logger.error(f"Command failed: {e.stderr}")
@@ -121,7 +163,34 @@ class CommandRunner:
                 self.logger.error(f"Command timed out after {timeout}s")
             raise
 
-    def run_as_user(self, command: list[str], timeout: int = 30) -> str:
+    @overload
+    def run_as_user(
+        self,
+        command: list[str],
+        timeout: int = 30,
+        *,
+        check: Literal[True] = ...,
+        **kwargs: Any,
+    ) -> str: ...
+
+    @overload
+    def run_as_user(
+        self,
+        command: list[str],
+        timeout: int = 30,
+        *,
+        check: Literal[False],
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+    def run_as_user(
+        self,
+        command: list[str],
+        timeout: int = 30,
+        *,
+        check: bool = True,
+        **kwargs: Any,
+    ) -> str | subprocess.CompletedProcess[str]:
         """
         Run a command as the logged in user and return its output.
 
@@ -133,8 +202,12 @@ class CommandRunner:
         :type command: list[str]
         :param timeout: Timeout in seconds, defaults to 30
         :type timeout: int, optional
-        :return: Command output (stdout)
-        :rtype: str
+        :param check: If True (default), raise CalledProcessError on non-zero exit
+            and return stdout as str. If False, return the CompletedProcess object.
+        :type check: bool, optional
+        :param kwargs: Additional keyword arguments passed to subprocess.run
+        :return: Command output (stdout) when check=True, or CompletedProcess when check=False
+        :rtype: str | subprocess.CompletedProcess[str]
         """
         if not self._validate_user():
             if self.logger:
@@ -150,11 +223,10 @@ class CommandRunner:
                 f"Running: {self._sanitize_command(command)} as the logged in user {self.username} (UID: {self.uid})"
             )
 
-        # Delegate to platform-specific command wrapping
         platform_cmd = get_command_support().run_as_user_command(command, self.username, self.uid)
 
         try:
-            return self.run(platform_cmd, timeout=timeout)
+            return self.run(platform_cmd, timeout=timeout, check=check, **kwargs)
         except subprocess.CalledProcessError as e:
             if self.logger:
                 self.logger.error(f"Command failed: {e.stderr}")
