@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.0] - 2026-04-18
+
+### Added
+
+- `CommandRunner.run()` accepts `check` parameter — `check=False` returns `subprocess.CompletedProcess` instead of `str`, enabling callers to inspect exit codes without exception handling
+- `CommandRunner.run()` and `run_as_user()` accept `**kwargs` passthrough to `subprocess.run`
+- `WebhookSender` accepts optional `headers` parameter for header-based webhook authentication
+- `DarwinDefaults` class (`pymdm.platforms.darwin`) — read, write, and delete macOS `defaults` plist values
+- `DarwinServiceManager` class (`pymdm.platforms.darwin`) — `launchctl` service management: is_loaded, bootout, bootstrap
+- `Win32Registry` class (`pymdm.platforms.win32`) — read, write, and delete Windows registry values via `winreg`
+- `Win32ServiceManager` class (`pymdm.platforms.win32`) — Windows service management via `sc.exe`: is_running, start, stop, delete
+
 ## [v0.4.3] - 2026-02-25
 
 ### Fixed

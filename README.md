@@ -6,11 +6,15 @@ A Python utility package for macOS MDM deployment scripts, built for [MacAdmins 
 
 - **ParamParser**: Safe parsing of Jamf Pro script parameters 4-11 (macOS)
 - **Dialog**: swiftDialog integration for user-facing dialogs and notifications (macOS)
-- **CommandRunner**: Secure subprocess execution with credential sanitization and platform-aware run-as-user
+- **CommandRunner**: Secure subprocess execution with credential sanitization, platform-aware run-as-user, and `check=False` mode for raw `CompletedProcess` access
 - **SystemInfo**: System information helpers — serial number, console user, hostname
 - **MdmLogger**: Structured logging with file output, rotation, and multiple log levels
-- **WebhookSender**: Send logs and metadata to webhooks
+- **WebhookSender**: Send logs and metadata to webhooks with optional custom headers
 - **IntuneParamProvider**: Env var and argv parameter parsing for Intune scripts (Windows)
+- **DarwinDefaults**: Read, write, and delete macOS `defaults` plist values (macOS)
+- **DarwinServiceManager**: Manage launchd services — is_loaded, bootout, bootstrap (macOS)
+- **Win32Registry**: Read, write, and delete Windows registry values via `winreg` (Windows)
+- **Win32ServiceManager**: Manage Windows services via `sc.exe` (Windows)
 
 ### Platform Support
 
@@ -23,6 +27,10 @@ A Python utility package for macOS MDM deployment scripts, built for [MacAdmins 
 | MdmLogger | Yes | Yes |
 | WebhookSender | Yes | Yes |
 | IntuneParamProvider | — | Yes |
+| DarwinDefaults | Yes | — |
+| DarwinServiceManager | Yes | — |
+| Win32Registry | — | Yes |
+| Win32ServiceManager | — | Yes |
 
 ## Installation
 
@@ -110,15 +118,18 @@ from pymdm import CommandRunner
 
 runner = CommandRunner(logger=logger)
 
-# Safe execution (list form)
+# Safe execution (list form) — returns str
 output = runner.run(["/usr/bin/id", "-u", username])
 
-# Shell execution (for pipes, etc.)
-output = runner.run("ps aux | grep python", timeout=10)
+# check=False returns subprocess.CompletedProcess
+result = runner.run(["/usr/bin/some_tool", "--check"], check=False)
+if result.returncode != 0:
+    logger.warn(f"Tool exited {result.returncode}: {result.stderr}")
+
+# Pass kwargs through to subprocess.run
+output = runner.run(["ls", "-la"], cwd="/tmp")
 
 # Run as logged-in user (platform-aware)
-# macOS: uses launchctl asuser
-# Windows: uses PowerShell Start-Process
 runner = CommandRunner(logger=logger, username="jsmith", uid=501)
 output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
 ```
@@ -152,7 +163,8 @@ from pymdm import WebhookSender, MdmLogger
 logger = MdmLogger(output_path="/var/log/script.log")
 webhook = WebhookSender(
     url="https://hooks.tray.io/...",
-    logger=logger
+    logger=logger,
+    headers={"Authorization": "Bearer <token>"},
 )
 
 # Send log with metadata
@@ -162,6 +174,70 @@ webhook.send(
     script_name="my_deployment_script",
     status="success"
 )
+```
+
+### macOS Defaults (plist)
+
+```python
+from pymdm.platforms.darwin import DarwinDefaults
+
+# Read a preference value
+val = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+
+# Write a string value
+DarwinDefaults.write("com.example.app", "Setting", "value")
+
+# Write a boolean value
+DarwinDefaults.write("com.example.app", "Enabled", "true", "-bool")
+
+# Delete a key
+DarwinDefaults.delete("com.example.app", "Setting")
+```
+
+### macOS Service Management
+
+```python
+from pymdm.platforms.darwin import DarwinServiceManager
+
+# Check if a launchd service is loaded
+if DarwinServiceManager.is_loaded("system/com.example.daemon"):
+    DarwinServiceManager.bootout("system/com.example.daemon")
+
+# Load a service from a plist
+DarwinServiceManager.bootstrap("system", "/Library/LaunchDaemons/com.example.daemon.plist")
+```
+
+### Windows Registry
+
+```python
+from pymdm.platforms.win32 import Win32Registry
+
+# Read a registry value
+product = Win32Registry.read(
+    Win32Registry.HKLM,
+    r"SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+    "ProductName",
+)
+
+# Write a string value (auto-detects REG_SZ)
+Win32Registry.write(Win32Registry.HKLM, r"SOFTWARE\MyApp", "Setting", "value")
+
+# Write an integer (auto-detects REG_DWORD)
+Win32Registry.write(Win32Registry.HKLM, r"SOFTWARE\MyApp", "Count", 42)
+
+# Delete a value
+Win32Registry.delete(Win32Registry.HKLM, r"SOFTWARE\MyApp", "Setting")
+```
+
+### Windows Service Management
+
+```python
+from pymdm.platforms.win32 import Win32ServiceManager
+
+if Win32ServiceManager.is_running("CrowdStrike Falcon"):
+    Win32ServiceManager.stop("CrowdStrike Falcon")
+
+Win32ServiceManager.start("MyService")
 ```
 
 ## Complete Example (macOS / Jamf Pro)
@@ -292,8 +368,8 @@ from pymdm.platforms import get_platform
 ```
 pymdm/
 ├── platforms/          # OS-specific implementations
-│   ├── darwin.py       # macOS: system_profiler, launchctl
-│   └── win32.py        # Windows: PowerShell, wmic, runas
+│   ├── darwin.py       # macOS: system_profiler, launchctl, defaults
+│   └── win32.py        # Windows: PowerShell, wmic, runas, winreg, sc.exe
 ├── mdm/                # MDM provider implementations
 │   ├── jamf.py         # Jamf Pro: sys.argv[4-11] parsing
 │   └── intune.py       # Intune: env vars, flexible argv
