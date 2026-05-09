@@ -500,7 +500,7 @@ requires-dist = [
     { name = "sphinx-design", marker = "extra == 'docs'" },
     { name = "sphinx-iconify", marker = "extra == 'docs'", specifier = ">=0.2.1" },
 ]
-provides-extras = ["requests", "managed", "docs", "dev"]
+provides-extras = ["requests", "docs", "dev"]
 
 [[package]]
 name = "pyproject-hooks"

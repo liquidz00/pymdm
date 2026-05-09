@@ -12,6 +12,11 @@ requires-python = ">=3.12"
 requests = [
     "requests>=2.32.5",
 ]
+# Marker extra for users running under MacAdmins managed_python3 (which
+# already bundles `requests`). Empty on purpose — prevents pip from
+# pulling a duplicate `requests` while still letting users signal intent
+# (e.g. `pip install pymdm[managed]`).
+managed = []
 docs = [
     "myst-parser",
     "sphinx>=7.3.7",
