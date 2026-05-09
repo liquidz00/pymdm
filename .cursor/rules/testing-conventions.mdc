@@ -1,0 +1,77 @@
+---
+description: pytest patterns and testing conventions specific to pymdm.
+globs: ["tests/**/*.py"]
+alwaysApply: false
+---
+
+# Testing conventions — pymdm
+
+## Stack
+
+- `pytest` only. No `pytest-asyncio`, no `pytest-mock` — use `unittest.mock` directly.
+- Coverage via `pytest-cov`, configured in `pyproject.toml` under `[tool.pytest.ini_options]`.
+- Current coverage: 90%. The `--cov-fail-under=90` gate is commented out — don't drop below it without a discussion.
+
+## File layout
+
+- Tests live in `tests/` at the repo root, flat (no nested directories).
+- Test files mirror source modules: `tests/test_<module>.py` corresponds to `src/pymdm/<module>.py`.
+- Platform-specific tests: `test_platforms_darwin.py`, `test_platforms_win32.py`. MDM-specific: `test_mdm_jamf.py`, `test_mdm_intune.py`, `test_mdm_base.py`.
+
+## Shared fixtures
+
+Defined in `tests/conftest.py`:
+
+- `temp_dir` — `tempfile.mkdtemp()` cleaned up on teardown.
+- `temp_log_file` — `temp_dir / "test.log"` (returned, not created).
+- `mock_logger` — `MdmLogger(debug=True)` for tests that need a logger but don't care about output.
+
+Use `tmp_path` (built-in pytest fixture) when you need a `Path` and don't need the cleanup behavior.
+
+## Mocking subprocess and external commands
+
+- **Mock at the module-local reference**: `pymdm.platforms.darwin.subprocess.run`, NOT global `subprocess.run`. Module-local patches survive refactors and don't leak across test files.
+- For `subprocess.check_output` mocks, return real strings (the real function returns `str` when `text=True`).
+- Mock `Mock(returncode=0, stdout="...", stderr="")` — don't use `Mock(spec=subprocess.CompletedProcess)` unless you're specifically testing the spec.
+
+## Platform detection in tests
+
+- Use `monkeypatch.setenv("PYMDM_PLATFORM", "darwin")` to flip platforms.
+- Always clear the lru_cache afterward: import `clear_platform_cache` from `pymdm.platforms._detection` and call it in setup/teardown — or use the autouse fixture pattern from `test_system_info.py`:
+
+```python
+@pytest.fixture(autouse=True)
+def _force_darwin_platform(monkeypatch):
+    clear_platform_cache()
+    monkeypatch.setenv("PYMDM_PLATFORM", "darwin")
+    yield
+    clear_platform_cache()
+```
+
+- Same pattern for `PYMDM_MDM_PROVIDER` if needed.
+
+## Platform-specific skips
+
+- Dialog tests are macOS-only via `pytestmark = pytest.mark.skipif(sys.platform != "darwin", reason="dialog is macOS-only")` at module level.
+- For Win32 tests that exercise `winreg` mocks, use `@patch.dict("sys.modules", {"winreg": Mock()})` so the lazy import inside `Win32Registry` resolves to the mock.
+
+## Determinism
+
+- No live network calls. No live subprocess calls beyond what's intrinsically harmless (e.g. reading stdlib `platform.node()` for hostname tests is fine).
+- No timing-dependent assertions, no reliance on system locale or timezone.
+- Don't write tests that depend on the host machine's OS version, hostname, or installed apps.
+
+## Parameterization
+
+- Parameterize edge cases for compactness: see `test_format_script_name` for a good example. Pass tuples of `(input, expected)` and document the bug each case is guarding.
+- For matrix-style coverage (e.g. testing both Jamf and Intune satisfy a Protocol), use `@pytest.mark.parametrize` with `ids=[...]` for readable test names.
+
+## Example users in tests
+
+- Use `jappleseed` (or `johnny.appleseed`) for placeholder usernames. Never the maintainer's real name.
+
+## What NOT to test
+
+- Don't test the inside of `subprocess.run` — that's the stdlib's job.
+- Don't test that `requests.post` makes an HTTP call — mock it and assert the URL/payload.
+- Don't test private helpers (single underscore prefix) directly unless their behavior is non-obvious or has a bug history (`_format_script_name` is the canonical exception).

@@ -1,0 +1,64 @@
+---
+description: Architecture rules for pymdm — abstraction layers, detection factories, facades, lazy imports.
+globs: ["src/pymdm/**/*.py"]
+alwaysApply: false
+---
+
+# pymdm architecture rules
+
+## Two abstraction layers
+
+The package has two orthogonal layers that compose to handle the cross-platform / cross-MDM matrix:
+
+1. **Platform layer** (`src/pymdm/platforms/`) — OS-specific operations (Darwin, Win32). Defined by `PlatformInfo` and `PlatformCommandSupport` Protocols in `_base.py`.
+2. **MDM provider layer** (`src/pymdm/mdm/`) — script-parameter conventions per provider. Defined by `MdmParamProvider` Protocol in `_base.py`.
+
+Don't conflate them: a Darwin host running Intune (mixed fleet edge case) is supportable in principle because the two layers are independent.
+
+## Protocols, not ABCs
+
+- Both abstraction layers use `typing.Protocol` with `@runtime_checkable`. Implementations DO NOT inherit from the Protocol — they satisfy it structurally.
+- Don't convert Protocols to abstract base classes. The structural-subtyping property is what makes mocking and parallel implementations easy.
+
+## Detection factories
+
+- `pymdm.platforms._detection.get_platform()` and `get_command_support()` are `@lru_cache`d singletons.
+- Detection order: explicit arg → `PYMDM_PLATFORM` env var → `sys.platform` fallback. Same pattern in `pymdm.mdm._base.get_provider()` with `PYMDM_MDM_PROVIDER`.
+- Tests that flip platforms mid-run must call `clear_platform_cache()` in setup/teardown — otherwise the cached singleton from a previous test leaks.
+
+## Facade layer
+
+The public API in `src/pymdm/__init__.py` re-exports user-facing classes. Some are thin **backward-compat facades** over the layered implementations:
+
+- `ParamParser` (param_parser.py) — static-method facade that delegates to a shared `JamfParamParser` instance. Preserves the original Jamf-only API.
+- `SystemInfo` (system_info.py) — static-method facade that delegates to `get_platform()`.
+
+Preserve the facade pattern when refactoring. If you need to add a new method, add it to the layered impl first, then expose it on the facade only if the surface should remain backward-compatible.
+
+## Lazy imports for optional dependencies
+
+- `requests` is an optional dependency. `webhook_sender.py` lazy-imports it via `_import_requests()` inside method bodies. Never `import requests` at module top in this package.
+- The same pattern applies to platform-specific modules (`winreg` is lazy-imported inside `Win32Registry` methods so the `pymdm.platforms.win32` module imports cleanly on macOS).
+
+## Backward compatibility (within reason)
+
+- Static methods on `ParamParser` / `SystemInfo` are public API — don't change their signatures.
+- `MdmLogger` constructor signature is public — additions OK (e.g. `max_bytes`), removals require a major bump.
+- `CommandRunner.run` and `run_as_user` have `@overload` declarations for `check=True` vs `check=False`. Preserve the overloads when changing signatures so type-checkers see the right return type.
+- `DarwinDefaults` was refactored from static methods to instance-based in v0.6 (breaking). Future refactors of similarly-positioned classes should be batched into a single major bump rather than dribbled out.
+
+## Type hints distribution
+
+- `src/pymdm/py.typed` (empty file) is shipped in the wheel via `[tool.setuptools.package-data]` in `pyproject.toml`. This is the PEP 561 marker — downstream consumers receive pymdm's type hints.
+- Don't break the typing contract: keep public APIs annotated, preserve `@overload` decorators, prefer modern union syntax.
+- For forward references in platform/mdm modules, use `from __future__ import annotations`. For circular-import avoidance (e.g. `CommandRunner` referenced from `darwin.py`), use `if TYPE_CHECKING:` guards.
+
+## Version
+
+- Single source of truth: `__version__` in `src/pymdm/__init__.py`. `pyproject.toml` reads it via `[tool.setuptools.dynamic]`.
+- Bump when releasing. Don't put a version string in any other file.
+
+## CHANGELOG and releases
+
+- Update `CHANGELOG.md` `[Unreleased]` for every user-visible change. Move `[Unreleased]` to a dated heading at release time.
+- The `build-release.yml` workflow validates the tag doesn't already exist before publishing — it is intentionally cautious. Don't bypass.
