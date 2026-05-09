@@ -201,7 +201,6 @@ class Win32CommandSupport:
         :rtype: list[str]
         """
         # Use PowerShell Start-Process for better automation support
-        cmd_str = subprocess.list2cmdline(command)
         return [
             "powershell",
             "-NoProfile",

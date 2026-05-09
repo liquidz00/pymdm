@@ -34,16 +34,31 @@ A Python utility package for macOS MDM deployment scripts, built for [MacAdmins 
 
 ## Installation
 
+`pymdm` keeps `requests` as an optional dependency because the primary deployment
+target — MacAdmins [`managed_python3`](https://github.com/macadmins/python) —
+already bundles it. Pick the install path that matches your runtime:
+
+```bash
+# Standard pip install (most users): pulls in requests
+pip install pymdm[requests]
+
+# MacAdmins managed_python3: requests is already bundled, no extras needed
+pip install pymdm[managed]
+
+# Bare install (no HTTP): WebhookSender will raise ImportError when used
+pip install pymdm
+```
+
 ### From Source
 
 ```bash
-uv pip install -e .
+uv pip install -e ".[requests]"
 ```
 
 ### Development
 
 ```bash
-make install     # Install with dev dependencies
+make install     # Install with dev dependencies (includes requests + docs)
 make test        # Run tests
 make format      # Format code with ruff
 ```
