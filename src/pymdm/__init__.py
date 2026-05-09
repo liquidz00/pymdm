@@ -7,7 +7,7 @@ and Windows/Intune platforms.
 """
 
 __title__ = "pymdm"
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 
 from .command_runner import CommandRunner
