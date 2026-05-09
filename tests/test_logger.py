@@ -69,16 +69,32 @@ def test_logger_log_levels(capsys):
 def test_logger_log_rotation(temp_dir):
     """Test log file rotation when size limit exceeded."""
     log_file = temp_dir / "rotate.log"
-    logger = MdmLogger(output_path=log_file)
+    # Use a small threshold so we can verify rotation deterministically
+    logger = MdmLogger(output_path=log_file, max_bytes=200)
 
-    # Write a large message to trigger rotation
-    large_message = "x" * 10_000_000  # 10MB
-    logger.info(large_message)
+    logger.info("x" * 300)  # exceeds 200 bytes
     logger.info("After rotation")
 
-    # Check backup exists
     backup = temp_dir / "rotate.log.old"
-    assert backup.exists() or log_file.exists()
+    assert backup.exists()
+    # The post-rotation log file holds only the second message
+    assert "After rotation" in log_file.read_text()
+    assert "x" * 300 in backup.read_text()
+
+
+def test_logger_no_rotation_below_threshold(temp_dir):
+    """Log files smaller than max_bytes are not rotated."""
+    log_file = temp_dir / "small.log"
+    logger = MdmLogger(output_path=log_file, max_bytes=10_000)
+
+    logger.info("hello")
+    logger.info("world")
+
+    backup = temp_dir / "small.log.old"
+    assert not backup.exists()
+    content = log_file.read_text()
+    assert "hello" in content
+    assert "world" in content
 
 
 def test_logger_startup_info(capsys):
@@ -143,3 +159,25 @@ def test_logger_log_exception_exit_code():
     with pytest.raises(SystemExit) as exc_info:
         logger.log_exception("boom", ValueError("err"), exit_code=4)
     assert exc_info.value.code == 4
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        # .sh suffix — bug repro: rstrip(".sh") on "bash.sh" yielded "ba"
+        ("bash.sh", "Bash (shell)"),
+        ("setup.sh", "Setup (shell)"),
+        ("ssh-config.sh", "Ssh Config (shell)"),
+        # .py suffix — bug repro: rstrip(".py") on "setup.py" yielded "setu"
+        ("setup.py", "Setup (python)"),
+        ("clear_downloads.py", "Clear Downloads (python)"),
+        ("zoom_camera_allowed.py", "Zoom Camera Allowed (python)"),
+        # No suffix — passthrough
+        ("custom_script", "custom_script"),
+        # Edge: name ends with chars from the suffix set but is not the suffix
+        ("happy", "happy"),
+    ],
+)
+def test_format_script_name(raw, expected):
+    """_format_script_name uses removesuffix, not rstrip."""
+    assert MdmLogger._format_script_name(raw) == expected

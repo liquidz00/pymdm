@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
+import pytest
+
 from pymdm.platforms.darwin import (
     DarwinCommandSupport,
     DarwinDefaults,
@@ -128,6 +130,29 @@ class TestDarwinPlatformInfo:
         label = info.get_os_version_label()
         assert label.startswith("macOS Version:")
 
+    @patch("pymdm.platforms.darwin.platform.mac_ver")
+    def test_get_os_version_label_uses_product_version(self, mock_mac_ver: Mock) -> None:
+        """Label uses the macOS productVersion, not the Darwin kernel version.
+
+        Regression: previously used platform.release() which returns the
+        Darwin kernel (e.g. "25.4.0" on macOS 26.4.1). Users expect the
+        marketing version they see in About This Mac.
+        """
+        mock_mac_ver.return_value = ("26.4.1", ("", "", ""), "arm64")
+        info = DarwinPlatformInfo()
+        assert info.get_os_version_label() == "macOS Version: 26.4.1"
+
+    @patch("pymdm.platforms.darwin.platform.release")
+    @patch("pymdm.platforms.darwin.platform.mac_ver")
+    def test_get_os_version_label_falls_back_when_mac_ver_empty(
+        self, mock_mac_ver: Mock, mock_release: Mock
+    ) -> None:
+        """If mac_ver() returns empty (SystemVersion.plist unreadable), fall back to release()."""
+        mock_mac_ver.return_value = ("", ("", "", ""), "")
+        mock_release.return_value = "25.4.0"
+        info = DarwinPlatformInfo()
+        assert info.get_os_version_label() == "macOS Version: 25.4.0"
+
 
 class TestDarwinCommandSupport:
     """Tests for DarwinCommandSupport command execution."""
@@ -194,12 +219,17 @@ class TestDarwinCommandSupport:
 
 
 class TestDarwinDefaults:
-    """Tests for DarwinDefaults plist operations."""
+    """Tests for DarwinDefaults plist operations.
 
-    @patch("subprocess.run")
+    Covers both root-context calls (no CommandRunner needed) and
+    user-context calls via ``as_user=True`` with a configured runner.
+    """
+
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_read_existing_key(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="1\n")
-        result = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+        defaults = DarwinDefaults()
+        result = defaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
         assert result == "1"
         assert mock_run.call_args[0][0] == [
             "/usr/bin/defaults",
@@ -208,16 +238,16 @@ class TestDarwinDefaults:
             "ShowHardDrivesOnDesktop",
         ]
 
-    @patch("subprocess.run")
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_read_missing_key(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=1, stdout="")
-        result = DarwinDefaults.read("com.apple.finder", "NonexistentKey")
+        result = DarwinDefaults().read("com.apple.finder", "NonexistentKey")
         assert result is None
 
-    @patch("subprocess.run")
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_write_string(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=0)
-        result = DarwinDefaults.write("com.example.app", "Setting", "value")
+        result = DarwinDefaults().write("com.example.app", "Setting", "value")
         assert result is True
         assert mock_run.call_args[0][0] == [
             "/usr/bin/defaults",
@@ -228,30 +258,100 @@ class TestDarwinDefaults:
             "value",
         ]
 
-    @patch("subprocess.run")
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_write_bool(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=0)
-        result = DarwinDefaults.write("com.example.app", "Enabled", "true", "-bool")
+        result = DarwinDefaults().write("com.example.app", "Enabled", "true", "-bool")
         assert result is True
         assert "-bool" in mock_run.call_args[0][0]
 
-    @patch("subprocess.run")
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_write_failure(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=1)
-        result = DarwinDefaults.write("com.example.app", "Setting", "value")
+        result = DarwinDefaults().write("com.example.app", "Setting", "value")
         assert result is False
 
-    @patch("subprocess.run")
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_delete_existing(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=0)
-        result = DarwinDefaults.delete("com.example.app", "Setting")
+        result = DarwinDefaults().delete("com.example.app", "Setting")
         assert result is True
 
-    @patch("subprocess.run")
+    @patch("pymdm.platforms.darwin.subprocess.run")
     def test_delete_missing(self, mock_run: Mock) -> None:
         mock_run.return_value = Mock(returncode=1)
-        result = DarwinDefaults.delete("com.example.app", "NonexistentKey")
+        result = DarwinDefaults().delete("com.example.app", "NonexistentKey")
         assert result is False
+
+    def test_as_user_without_runner_raises(self) -> None:
+        """as_user=True with no runner is a configuration error."""
+        defaults = DarwinDefaults()
+        with pytest.raises(ValueError, match="requires a CommandRunner"):
+            defaults.read("com.apple.dock", "orientation", as_user=True)
+
+    def test_as_user_with_partial_runner_raises(self) -> None:
+        """as_user=True with a runner missing username/uid is a configuration error."""
+        from pymdm import CommandRunner
+
+        defaults = DarwinDefaults(runner=CommandRunner())  # no username/uid
+        with pytest.raises(ValueError, match="username and uid"):
+            defaults.read("com.apple.dock", "orientation", as_user=True)
+
+    def test_as_user_read_uses_runner_run_as_user(self) -> None:
+        """as_user=True dispatches through CommandRunner.run_as_user."""
+        from unittest.mock import MagicMock
+
+        runner = MagicMock()
+        runner.username = "jappleseed"
+        runner.uid = 501
+        runner.run_as_user.return_value = Mock(returncode=0, stdout="bottom\n")
+
+        defaults = DarwinDefaults(runner=runner)
+        result = defaults.read("com.apple.dock", "orientation", as_user=True)
+
+        assert result == "bottom"
+        runner.run_as_user.assert_called_once_with(
+            ["/usr/bin/defaults", "read", "com.apple.dock", "orientation"],
+            check=False,
+        )
+
+    def test_as_user_write_uses_runner_run_as_user(self) -> None:
+        """as_user=True writes route through CommandRunner.run_as_user."""
+        from unittest.mock import MagicMock
+
+        runner = MagicMock()
+        runner.username = "jappleseed"
+        runner.uid = 501
+        runner.run_as_user.return_value = Mock(returncode=0)
+
+        defaults = DarwinDefaults(runner=runner)
+        result = defaults.write("com.apple.dock", "tilesize", "48", "-int", as_user=True)
+
+        assert result is True
+        called_cmd = runner.run_as_user.call_args[0][0]
+        assert called_cmd == [
+            "/usr/bin/defaults",
+            "write",
+            "com.apple.dock",
+            "tilesize",
+            "-int",
+            "48",
+        ]
+
+    def test_as_user_false_uses_subprocess_even_with_runner(self) -> None:
+        """A configured runner is ignored when as_user=False — instance can do both."""
+        from unittest.mock import MagicMock
+
+        runner = MagicMock()
+        runner.username = "jappleseed"
+        runner.uid = 501
+        defaults = DarwinDefaults(runner=runner)
+
+        with patch("pymdm.platforms.darwin.subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout="ok\n")
+            defaults.read("com.apple.SoftwareUpdate", "AutomaticCheckEnabled")
+            mock_run.assert_called_once()
+        runner.run_as_user.assert_not_called()
 
 
 class TestDarwinServiceManager:

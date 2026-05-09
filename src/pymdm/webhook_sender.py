@@ -1,10 +1,36 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
-
-import requests
+from typing import TYPE_CHECKING, Any
 
 from .logger import MdmLogger
+
+if TYPE_CHECKING:
+    import requests as requests_module  # noqa: F401
+
+
+_REQUESTS_MISSING_MESSAGE = (
+    "WebhookSender requires the 'requests' library. "
+    "Install it with one of:\n"
+    "  pip install pymdm[requests]   # standard installs\n"
+    "  pip install pymdm[managed]    # MacAdmins managed_python3 (requests already bundled)\n"
+    "If you're running under managed_python3 and still see this error, your interpreter "
+    "may not be the managed one — confirm with `which python3`."
+)
+
+
+def _import_requests():
+    """Lazy-import the ``requests`` library with a helpful error if missing.
+
+    ``requests`` is intentionally an optional dependency: MacAdmins
+    ``managed_python3`` ships with it bundled, so requiring it as a hard
+    dependency would be redundant for the primary target. Plain pip users
+    should install via the ``[requests]`` extra.
+    """
+    try:
+        import requests
+    except ImportError as e:  # pragma: no cover - exercised only without requests
+        raise ImportError(_REQUESTS_MISSING_MESSAGE) from e
+    return requests
 
 
 class WebhookSender:
@@ -52,6 +78,7 @@ class WebhookSender:
 
         self.logger.info(f"Sending info to webhook: {self.logfile.name}")
 
+        requests = _import_requests()
         try:
             with open(self.logfile, "rb") as f:
                 files = {"logfile": (self.logfile.name, f, "text/plain")}
@@ -91,6 +118,7 @@ class WebhookSender:
 
         self.logger.info(f"Sending data to webhook URL ending in: {self.url[-8:]}")
 
+        requests = _import_requests()
         try:
             response = requests.post(self.url, json=metadata, headers=self.headers, timeout=30)
 

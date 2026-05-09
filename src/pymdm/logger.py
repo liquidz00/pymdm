@@ -13,10 +13,12 @@ class MdmLogger:
         debug: bool = False,
         quiet: bool = False,
         output_path: Path | str | None = None,
+        max_bytes: int = MAX_BYTES,
     ):
         self.debug_enabled = debug
         self.quiet = quiet
         self.output_path = Path(output_path) if output_path else None
+        self.max_bytes = max_bytes
 
     def _create_logfile(self) -> None:
         """Ensures the passed output_path for logs exists."""
@@ -24,10 +26,10 @@ class MdmLogger:
             self.output_path.parent.mkdir(exist_ok=True, parents=True)
             self.output_path.touch()
 
-    def _check_log_size(self, max_bytes: int = MAX_BYTES) -> None:
-        """Rotate log file if it exceeds max_bytes."""
+    def _check_log_size(self) -> None:
+        """Rotate log file if it exceeds self.max_bytes."""
         if self.output_path and self.output_path.exists():
-            if self.output_path.stat().st_size > max_bytes:
+            if self.output_path.stat().st_size > self.max_bytes:
                 # Rename current log to .old
                 backup = self.output_path.with_suffix(self.output_path.suffix + ".old")
                 if backup.exists():
@@ -37,12 +39,12 @@ class MdmLogger:
     @staticmethod
     def _format_script_name(script_name: str) -> str:
         if script_name.endswith(".sh"):
-            shell_script = script_name.rstrip(".sh")
+            shell_script = script_name.removesuffix(".sh")
             shell_script = shell_script.replace("-", " ").title()
             return f"{shell_script} (shell)"
 
         if script_name.endswith(".py"):
-            py_script = script_name.rstrip(".py")
+            py_script = script_name.removesuffix(".py")
             py_script = py_script.replace("_", " ").title()
             return f"{py_script} (python)"
 

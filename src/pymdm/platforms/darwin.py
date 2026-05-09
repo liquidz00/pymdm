@@ -13,9 +13,12 @@ import platform
 import re
 import subprocess
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from ._base import default_get_hostname
+
+if TYPE_CHECKING:
+    from ..command_runner import CommandRunner
 
 
 class DarwinPlatformInfo:
@@ -101,10 +104,20 @@ class DarwinPlatformInfo:
     def get_os_version_label(self) -> str:
         """Return macOS version label for logging.
 
-        :return: e.g. "macOS Version: 24.5.0"
+        Reads the marketing macOS productVersion (e.g. "15.4.1", "26.4.1")
+        from ``platform.mac_ver()``. ``platform.release()`` was used previously
+        but returns the Darwin kernel version (e.g. "25.4.0" on macOS 26.4.1),
+        which is not what users expect to see in logs.
+
+        :return: e.g. "macOS Version: 26.4.1"
         :rtype: str
         """
-        return f"macOS Version: {platform.release()}"
+        product_version, _, _ = platform.mac_ver()
+        if not product_version:
+            # Extremely unusual fallback (SystemVersion.plist unreadable).
+            # Better to surface *something* than crash.
+            product_version = platform.release()
+        return f"macOS Version: {product_version}"
 
 
 class DarwinCommandSupport:
@@ -169,38 +182,68 @@ class DarwinCommandSupport:
 class DarwinDefaults:
     """Read, write, and delete macOS user defaults (plist) values.
 
-    Wraps ``/usr/bin/defaults`` for non-raising plist operations.
-    All methods return None or False on failure instead of raising.
+    Wraps ``/usr/bin/defaults`` for non-raising plist operations: all methods
+    return ``None`` or ``False`` on failure instead of raising.
+
+    Operations run in the calling process's context by default (i.e. as root
+    when the script is invoked under MDM). Pass a :class:`CommandRunner` with
+    a ``username``/``uid`` to allow per-call ``as_user=True`` reads/writes
+    against the logged-in user's domain.
 
     :Example:
 
-        >>> val = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
-        >>> if val is not None:
-        ...     print(f"Value: {val}")
+        >>> # Root context (or whoever the script runs as)
+        >>> defaults = DarwinDefaults()
+        >>> defaults.read("com.apple.SoftwareUpdate", "AutomaticCheckEnabled")
+        '1'
+
+        >>> # User context — pipe through a configured CommandRunner
+        >>> runner = CommandRunner(logger=logger, username="jappleseed", uid=501)
+        >>> defaults = DarwinDefaults(runner=runner)
+        >>> defaults.read("com.apple.dock", "orientation", as_user=True)
+        'bottom'
+        >>> defaults.write("com.apple.dock", "tilesize", "48", "-int", as_user=True)
+        True
     """
 
-    @staticmethod
-    def read(domain: str, key: str) -> str | None:
+    def __init__(self, runner: CommandRunner | None = None) -> None:
+        """Construct a DarwinDefaults handler.
+
+        :param runner: Optional CommandRunner. Required for ``as_user=True``
+            calls; ignored otherwise. The runner must have ``username`` and
+            ``uid`` set when ``as_user=True`` is used.
+        :type runner: CommandRunner | None
+        """
+        self._runner = runner
+
+    def read(self, domain: str, key: str, *, as_user: bool = False) -> str | None:
         """Read a defaults value by domain and key.
 
         :param domain: The plist domain (e.g., "com.apple.finder")
         :type domain: str
         :param key: The key to read
         :type key: str
+        :param as_user: If True, run via the configured CommandRunner's
+            ``run_as_user`` so the read targets the logged-in user's domain.
+        :type as_user: bool
         :return: Value as string, or None if the key doesn't exist
         :rtype: str | None
         """
-        result = subprocess.run(
-            ["/usr/bin/defaults", "read", domain, key],
-            capture_output=True,
-            text=True,
-        )
+        cmd = ["/usr/bin/defaults", "read", domain, key]
+        result = self._exec(cmd, as_user=as_user)
         if result.returncode != 0:
             return None
         return result.stdout.strip()
 
-    @staticmethod
-    def write(domain: str, key: str, value: str, value_type: str = "-string") -> bool:
+    def write(
+        self,
+        domain: str,
+        key: str,
+        value: str,
+        value_type: str = "-string",
+        *,
+        as_user: bool = False,
+    ) -> bool:
         """Write a defaults value.
 
         :param domain: The plist domain
@@ -211,33 +254,50 @@ class DarwinDefaults:
         :type value: str
         :param value_type: defaults type flag (e.g., "-string", "-int", "-bool", "-float")
         :type value_type: str
+        :param as_user: If True, run as the configured user (see read).
+        :type as_user: bool
         :return: True if successful
         :rtype: bool
         """
-        result = subprocess.run(
-            ["/usr/bin/defaults", "write", domain, key, value_type, str(value)],
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0
+        cmd = ["/usr/bin/defaults", "write", domain, key, value_type, str(value)]
+        return self._exec(cmd, as_user=as_user).returncode == 0
 
-    @staticmethod
-    def delete(domain: str, key: str) -> bool:
+    def delete(self, domain: str, key: str, *, as_user: bool = False) -> bool:
         """Delete a defaults key.
 
         :param domain: The plist domain
         :type domain: str
         :param key: The key to delete
         :type key: str
+        :param as_user: If True, run as the configured user (see read).
+        :type as_user: bool
         :return: True if deleted, False if missing or failed
         :rtype: bool
         """
-        result = subprocess.run(
-            ["/usr/bin/defaults", "delete", domain, key],
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0
+        cmd = ["/usr/bin/defaults", "delete", domain, key]
+        return self._exec(cmd, as_user=as_user).returncode == 0
+
+    def _exec(self, cmd: list[str], *, as_user: bool) -> subprocess.CompletedProcess[str]:
+        """Dispatch a defaults command in the appropriate user context.
+
+        When ``as_user=True``, requires the instance to have been constructed
+        with a CommandRunner that has username and uid set; raises
+        :class:`ValueError` otherwise so callers fail loudly rather than
+        silently running in root context.
+        """
+        if as_user:
+            if self._runner is None:
+                raise ValueError(
+                    "DarwinDefaults: as_user=True requires a CommandRunner. "
+                    "Construct with DarwinDefaults(runner=CommandRunner(...))."
+                )
+            if not self._runner.username or self._runner.uid is None:
+                raise ValueError(
+                    "DarwinDefaults: as_user=True requires the CommandRunner "
+                    "to have both username and uid set."
+                )
+            return self._runner.run_as_user(cmd, check=False)
+        return subprocess.run(cmd, capture_output=True, text=True)
 
 
 class DarwinServiceManager:
