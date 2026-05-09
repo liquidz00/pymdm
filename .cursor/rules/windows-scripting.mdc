@@ -1,0 +1,57 @@
+---
+description: Windows / Win32 scripting patterns for pymdm. Apply when editing platform/win32 code or Windows-specific tests.
+globs: ["src/pymdm/platforms/win32.py", "tests/test_platforms_win32.py"]
+alwaysApply: false
+---
+
+# Windows / Win32 scripting rules
+
+> **Important**: All Windows code in pymdm was authored by AI agents — there is no contributor with deep Windows scripting experience to verify behavior end-to-end. Be extra cautious with claims about Windows behavior; prefer mechanisms with documented MSDN / Microsoft Learn references over recall.
+
+## PowerShell vs wmic
+
+- Prefer PowerShell over `wmic` — `wmic` is deprecated as of Windows 11 / Server 2022.
+- For PowerShell invocation: `["powershell", "-NoProfile", "-Command", "<script>"]`. Always include `-NoProfile` to avoid loading user profile customizations.
+- Prefer `Get-CimInstance` over `Get-WmiObject` (the latter is removed in PowerShell 7+).
+- Fallback chain pattern (see `Win32PlatformInfo.get_serial_number`): try PowerShell first, fall back to `wmic` if PowerShell isn't available.
+
+## Subprocess
+
+- `subprocess.check_output([...], text=True, timeout=15)` for single-shot data fetches. The 15s timeout matters because PowerShell startup is slow.
+- Catch `(subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError)` together — these are the realistic failure modes on Windows.
+- Don't pass user-controlled strings into PowerShell command bodies via f-strings — risk of command injection on values containing single quotes. (This is a known robustness issue in `get_user_full_name`; new code should escape or use parameter binding.)
+
+## Console user
+
+- `os.getlogin()` returns the user who started the **controlling terminal session**, not necessarily the interactively logged-in user. In Intune SYSTEM context, this often returns "SYSTEM" or raises.
+- Fallback to the `USERNAME` environment variable (also unreliable in SYSTEM context).
+- The "correct" API for "who is interactively logged in" on Windows is `WTSQuerySessionInformation` via `ctypes` or `pywin32` — pymdm does NOT currently use this; it's a known limitation.
+- UID concept doesn't exist on Windows. `Win32PlatformInfo.get_console_user` returns `0` as a placeholder for the uid field. Don't compare it to UID thresholds.
+
+## winreg
+
+- `winreg` is a stdlib module that is only importable on Windows. Lazy-import it inside method bodies (the pattern `Win32Registry` uses), with `(OSError, ImportError)` catches — don't import at module top.
+- Hive constants are exposed on `Win32Registry` (`HKLM`, `HKCU`, etc.) and value-type constants (`REG_SZ`, `REG_DWORD`, etc.) so callers don't need to import winreg directly.
+- Auto-detection in `Win32Registry.write` covers `str` → `REG_SZ` and `int` → `REG_DWORD`. Other types (bytes → `REG_BINARY`, multi-string lists → `REG_MULTI_SZ`) require explicit `value_type` argument.
+
+## Services (sc.exe)
+
+- `sc.exe` is the supported CLI for service management. Prefer it over PowerShell `Get-Service` for read-only checks because it's lighter weight.
+- Commands: `sc query <name>` (status), `sc start <name>`, `sc stop <name>`, `sc delete <name>`.
+- Status is parsed from stdout (`"RUNNING" in stdout`). Empty stdout or non-zero returncode means service not found / inaccessible.
+
+## runas / run-as-user
+
+- `Win32CommandSupport.run_as_user_command` wraps with `Start-Process -Credential (Get-Credential ...)` — but `Get-Credential` is **interactive**, so this DOES NOT work in MDM SYSTEM context. The docstring acknowledges it.
+- For automated user-context execution under Intune (SYSTEM), the realistic approaches are scheduled tasks (`schtasks`) or PowerShell remoting — neither of which pymdm implements today.
+- Don't introduce new code that assumes `run_as_user` "just works" on Windows. Document the limitation if a feature depends on it.
+
+## Username validation
+
+- Windows usernames may contain spaces (`Test User`), dots, hyphens, underscores. The validation regex in `Win32CommandSupport.validate_user` reflects this: `^[a-zA-Z0-9._\- ]+$`.
+- UID is not used on Windows; `validate_user(username, uid=None)` is the typical call shape.
+
+## Style
+
+- Sphinx-style docstrings — see `sphinx-docstrings.mdc`.
+- For example users in docstrings, comments, or tests, use `jappleseed`.

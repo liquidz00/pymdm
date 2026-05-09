@@ -1,0 +1,58 @@
+---
+description: macOS / Darwin scripting patterns for pymdm. Apply when editing platform/darwin code, Darwin-specific tests, or any macOS-targeting helper.
+globs: ["src/pymdm/platforms/darwin.py", "tests/test_platforms_darwin.py"]
+alwaysApply: false
+---
+
+# Darwin (macOS) scripting rules
+
+## Subprocess
+
+- Always use absolute paths to system binaries: `/usr/bin/defaults`, `/bin/launchctl`, `/usr/sbin/system_profiler`, `/usr/bin/stat`, `/usr/bin/id`. PATH is unreliable in MDM contexts.
+- Prefer `subprocess.run(..., capture_output=True, text=True)` for single-shot commands — non-raising by default, easy to inspect `returncode`.
+- Use `subprocess.check_output(...)` only when you want to raise on non-zero (rarely the right shape for MDM scripts).
+- Never `shell=True` unless pipes are genuinely required. Pass list form: `["/bin/launchctl", "list", target]`.
+
+## Console user
+
+- Detect via `stat -f%Su /dev/console` for the username, then `id -u <user>` for the UID.
+- Always check the result against `DarwinPlatformInfo.invalid_users` (`root`, `""`, `loginwindow`, `_mbsetupuser`) — these mean "no real user logged in."
+- Home directory: hardcode `Path(f"/Users/{username}")`. Don't switch to `pwd.getpwnam` or `dscl` lookups — admin accounts under `/var/` and Kerberos network homes are out of scope for general-purpose scripts. If a specific script needs that, it should hardcode it explicitly.
+
+## OS version
+
+- For the macOS marketing version, use `platform.mac_ver()[0]` (e.g. `"26.4.1"`).
+- `platform.release()` returns the **Darwin kernel version** (e.g. `"25.4.0"` on macOS 26.4.1) — NOT the macOS version. Don't use it for user-facing labels.
+
+## defaults
+
+- Use `DarwinDefaults` rather than rolling subprocess calls.
+- Type flags: `-string` (default), `-int`, `-bool`, `-float`, `-array`, `-dict`. Pass values as strings; `defaults` parses.
+- For user-context reads, construct `DarwinDefaults(runner=CommandRunner(username=..., uid=...))` and pass `as_user=True` per call. Do NOT roll your own `sudo -u` wrapping — go through `run_as_user` so platform-specific wrapping (`launchctl asuser`) stays consistent.
+
+## launchctl
+
+- Domain-target format: `system/<label>` for daemons, `gui/<uid>/<label>` for user agents.
+- `launchctl print <target>` for inspection (returns 0 if loaded, non-zero otherwise).
+- `launchctl bootstrap <domain> <plist>` to load, `launchctl bootout <target>` to unload. The legacy `load`/`unload` are deprecated on modern macOS.
+- For `run_as_user`, the wrapping is `["/bin/launchctl", "asuser", str(uid), "sudo", "-u", username, ...command]`.
+
+## TCC (Transparency, Consent, Control)
+
+- Two TCC databases:
+  - **System-level**: `/Library/Application Support/com.apple.TCC/TCC.db` — Full Disk Access, Screen Recording, Accessibility (some).
+  - **User-level**: `~/Library/Application Support/com.apple.TCC/TCC.db` — Camera, Microphone, Calendar, Contacts.
+- Camera/Mic/Screen Recording perms live in the user-level DB. Reading them as root returns nothing — must run as the logged-in user, OR construct the path under their home directory.
+- `auth_value` schema: `0` denied, `1` allowed (pre-Big Sur), `2` allowed, `3` limited (Big Sur+).
+- For read-only sqlite access from Python: `sqlite3.connect(f"file:{path}?mode=ro", uri=True)`. Always use parameterized queries.
+
+## User validation (CommandRunner / DarwinCommandSupport)
+
+- Minimum non-system UID on macOS: 500.
+- Username regex: `^[a-zA-Z0-9._@-]+$` (allows dots, underscores, hyphens, `@` for `user@domain.com` accounts).
+- `validate_user()` returns `False` if either is missing, the username has invalid chars, or UID < 500. Don't bypass — propagate the failure.
+
+## Style
+
+- For example users in docstrings, comments, or tests, use `jappleseed` (or `johnny.appleseed`).
+- Sphinx-style docstrings — see `sphinx-docstrings.mdc`.
