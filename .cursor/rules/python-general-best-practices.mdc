@@ -1,0 +1,80 @@
+---
+description: Python conventions for the pymdm package. Apply these rules when generating or editing Python code under src/ or tests/.
+globs: ["src/**/*.py", "tests/**/*.py"]
+alwaysApply: true
+---
+
+# Python Conventions — pymdm
+
+## Project structure
+
+- This is a single-package src-layout repo (NOT a uv workspace).
+- Library code lives in `src/pymdm/`.
+- Subpackages: `pymdm.platforms` (Darwin/Win32 abstractions), `pymdm.mdm` (Jamf/Intune providers).
+- Tests live in `tests/` at the repo root, flat layout (no nested directories).
+- Tests mirror source layout: `test_<module>.py` corresponds to `src/pymdm/<module>.py`.
+- Documentation lives in `docs/` and builds with Sphinx + myst-parser.
+
+## Code style
+
+- **Ruff for both linting and formatting.** Configuration in `pyproject.toml` under `[tool.ruff]`.
+  Do NOT use Black, isort, autopep8, or yapf.
+- **Line length 100, double quotes, target Python 3.12.**
+- **PEP 8 naming**: `snake_case` for functions/variables, `PascalCase` for classes, `UPPER_CASE` for module constants.
+- Module-level constants: ALL CAPS (e.g. `MAX_BYTES`).
+- Use `from __future__ import annotations` at the top of platform/mdm modules where forward refs are needed.
+
+## Type hints
+
+- Type hints required on every public function/method parameter and return.
+- **Modern union syntax**: `str | None`, `list[int]`, `dict[str, Any]`.
+- Do NOT use `Optional[T]`, `Union[A, B]`, `List[T]`, `Dict[K, V]` — pre-3.10 forms.
+- Import from `typing` only when the builtin form doesn't exist (`Protocol`, `Literal`, `TypedDict`, `Any`, `ClassVar`, `TYPE_CHECKING`).
+- When type-hinting CommandRunner from inside platform modules, use `TYPE_CHECKING` guards to avoid circular imports.
+
+## Docstrings
+
+- **Sphinx / reStructuredText** style with `:param:`, `:type:`, `:return:`, `:rtype:`, `:raises:` markup.
+  See `sphinx-docstrings.mdc` for the full syntax rule.
+- The opening `"""` goes on its own line immediately after the signature.
+- For example users in docstrings, use `jappleseed` (or `johnny.appleseed`) — never the maintainer's real name.
+
+## HTTP / requests
+
+- `requests` is intentionally an optional dependency declared under `[project.optional-dependencies]`.
+  It's lazy-imported inside `webhook_sender.py` so the package imports cleanly without it.
+- If you add new HTTP code, keep the lazy-import discipline. Don't add `import requests` at module top.
+- Don't switch to httpx — pymdm targets MacAdmins managed_python3, which bundles requests.
+
+## Errors
+
+- Catch specific, expected exceptions where possible.
+- The codebase has `E722` ignored in ruff but bare `except` is still discouraged. Prefer `except Exception:` with a contextual log.
+- Platform helpers (DarwinDefaults, Win32Registry, etc.) follow a non-raising convention: return None / False on failure rather than raising.
+
+## Testing
+
+- pytest. No pytest-asyncio, no pytest-mock — just pytest + unittest.mock.
+- Shared fixtures (`temp_dir`, `temp_log_file`, `mock_logger`) live in `tests/conftest.py`.
+- Mock at module-local references: `pymdm.platforms.darwin.subprocess.run`, NOT global `subprocess.run`.
+- See `testing-conventions.mdc` for project-specific test patterns (PYMDM_PLATFORM env var, clear_platform_cache, etc.).
+
+## Dependencies
+
+- Managed by `uv`. `make install-dev` sets up the venv with all dev extras.
+- Production deps in `[project.dependencies]` (currently empty — runtime is stdlib-only by design).
+- Optional groups: `requests`, `managed`, `docs`, `dev` — see `pyproject.toml`.
+- Don't add new top-level runtime dependencies casually. The "no required runtime deps" property is intentional for managed_python3 compatibility.
+
+## Architecture
+
+- Two orthogonal Protocol-based abstraction layers (platforms + mdm). See `pymdm-architecture.mdc`.
+- Don't convert Protocols to ABCs — keep `@runtime_checkable` so implementations don't need to inherit.
+
+## What this codebase is NOT
+
+- Not async. No `asyncio`, no `httpx.AsyncClient`, no `pytest.mark.asyncio`.
+- Not a workspace. There is no `[tool.uv.sources] sibling = { workspace = true }`.
+- Not Pydantic. No `BaseModel`, no `field_validator`. Plain dataclasses where structure is needed (see `Dialog` for the dataclass pattern).
+- Not a CLI. No `click`, no `[project.scripts]`. pymdm is a library.
+- Not a place for `Optional[T]` / `Union[A, B]` / `List[T]` / `Dict[K, V]`.
