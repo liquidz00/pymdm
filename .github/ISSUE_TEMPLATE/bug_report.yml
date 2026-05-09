@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a defect in pymdm
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. The more reproducible the report, the faster the fix.
+
+  - type: input
+    id: pymdm-version
+    attributes:
+      label: pymdm version
+      description: 'Output of `python -c "import pymdm; print(pymdm.__version__)"`'
+      placeholder: "0.6.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - macOS (Jamf Pro / managed_python3)
+        - macOS (other)
+        - Windows (Intune)
+        - Windows (other)
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: Output of `python --version`
+      placeholder: "3.12.7"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior. Include error messages or stack traces in fenced code blocks.
+      placeholder: When I called X, I expected Y but got Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: A minimal code snippet or sequence of steps that reproduces the issue.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else relevant — MDM context, related issues, prior debugging.
+    validations:
+      required: false

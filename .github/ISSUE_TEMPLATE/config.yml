@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://pymdm.readthedocs.io/
+    about: Browse the API reference and user guide before opening an issue.

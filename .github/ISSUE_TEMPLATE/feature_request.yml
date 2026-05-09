@@ -1,0 +1,61 @@
+name: Feature request
+description: Suggest a new feature or enhancement for pymdm
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please describe the feature and the use case it solves.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case, pain point, or workflow gap.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Sketch the API, behavior, or UX you'd like to see. Code snippets welcome.
+      render: python
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you tried other approaches? Why didn't they fit?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Which area would this touch?
+      multiple: true
+      options:
+        - Platform layer (macOS / Windows abstractions)
+        - MDM provider layer (Jamf / Intune / new provider)
+        - Logger
+        - WebhookSender
+        - Dialog (swiftDialog)
+        - CommandRunner
+        - Documentation
+        - Tooling (CI, build, packaging)
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, references, related issues.
+    validations:
+      required: false
