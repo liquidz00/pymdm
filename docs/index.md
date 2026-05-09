@@ -81,3 +81,10 @@ api-reference/platforms-darwin
 api-reference/platforms-win32
 api-reference/mdm
 ```
+
+```{toctree}
+:caption: Project
+:hidden:
+
+contributing
+```
