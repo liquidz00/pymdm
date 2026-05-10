@@ -58,9 +58,10 @@ uv pip install -e ".[requests]"
 ### Development
 
 ```bash
-make install     # Install with dev dependencies (includes requests + docs)
-make test        # Run tests
-make format      # Format code with ruff
+make install-dev   # Install with dev dependencies (includes requests + docs)
+make test          # Run tests
+make format        # Format code with ruff
+make help          # List every target with a description
 ```
 
 ## Quick Start
@@ -145,7 +146,7 @@ if result.returncode != 0:
 output = runner.run(["ls", "-la"], cwd="/tmp")
 
 # Run as logged-in user (platform-aware)
-runner = CommandRunner(logger=logger, username="jsmith", uid=501)
+runner = CommandRunner(logger=logger, username="jappleseed", uid=501)
 output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
 ```
 
@@ -167,7 +168,7 @@ if user_info:
 hostname = SystemInfo.get_hostname()
 
 # Get full name
-full_name = SystemInfo.get_user_full_name("jsmith")
+full_name = SystemInfo.get_user_full_name("jappleseed")
 ```
 
 ### Webhook Integration
@@ -193,21 +194,33 @@ webhook.send(
 
 ### macOS Defaults (plist)
 
+`DarwinDefaults` is instance-based as of v0.6.0. Operations run in the calling
+process's context by default. Pass a configured `CommandRunner` to enable
+per-call `as_user=True` for the logged-in user's domain.
+
 ```python
+from pymdm import CommandRunner, MdmLogger
 from pymdm.platforms.darwin import DarwinDefaults
 
-# Read a preference value
-val = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+logger = MdmLogger(output_path="/var/log/my_script.log")
 
-# Write a string value
-DarwinDefaults.write("com.example.app", "Setting", "value")
+# Root context (e.g. an MDM-launched script running as root)
+defaults = DarwinDefaults()
+val = defaults.read("com.apple.SoftwareUpdate", "AutomaticCheckEnabled")
+defaults.write("com.example.app", "Setting", "value")
+defaults.write("com.example.app", "Enabled", "true", "-bool")
+defaults.delete("com.example.app", "Setting")
 
-# Write a boolean value
-DarwinDefaults.write("com.example.app", "Enabled", "true", "-bool")
+# User context — pipe through a CommandRunner with username + uid
+runner = CommandRunner(logger=logger, username="jappleseed", uid=501)
+defaults = DarwinDefaults(runner=runner)
 
-# Delete a key
-DarwinDefaults.delete("com.example.app", "Setting")
+orientation = defaults.read("com.apple.dock", "orientation", as_user=True)
+defaults.write("com.apple.dock", "tilesize", "48", "-int", as_user=True)
 ```
+
+`as_user=True` without a configured `CommandRunner` raises `ValueError` so
+misconfigurations fail loudly rather than silently writing to the root domain.
 
 ### macOS Service Management
 
@@ -361,6 +374,32 @@ except Exception as e:
 | swiftDialog | Windows toast/WPF | `Dialog` (macOS only) |
 
 ## Migration Notes
+
+### From pymdm < 0.6.0
+
+`DarwinDefaults` was refactored from static methods to an instance-based API.
+All other public APIs (`SystemInfo`, `ParamParser`, `CommandRunner`, `MdmLogger`,
+`WebhookSender`, `Dialog`, `DarwinServiceManager`, `Win32Registry`,
+`Win32ServiceManager`) are unchanged.
+
+```python
+# v0.5.x (removed)
+DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+DarwinDefaults.write("com.example.app", "Setting", "value")
+DarwinDefaults.delete("com.example.app", "Setting")
+
+# v0.6.0 — drop-in replacement for prior root-context behavior
+defaults = DarwinDefaults()
+defaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+defaults.write("com.example.app", "Setting", "value")
+defaults.delete("com.example.app", "Setting")
+
+# v0.6.0 — new: user-context reads/writes via CommandRunner
+runner = CommandRunner(logger=logger, username="jappleseed", uid=501)
+DarwinDefaults(runner=runner).read("com.apple.dock", "orientation", as_user=True)
+```
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for the full v0.6.0 release notes.
 
 ### From pymdm < 0.4.0
 
