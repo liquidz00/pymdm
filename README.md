@@ -7,6 +7,7 @@ A Python utility package for macOS MDM deployment scripts, built for [MacAdmins 
 - **ParamParser**: Safe parsing of Jamf Pro script parameters 4-11 (macOS)
 - **Dialog**: swiftDialog integration for user-facing dialogs and notifications (macOS)
 - **CommandRunner**: Secure subprocess execution with credential sanitization, platform-aware run-as-user, and `check=False` mode for raw `CompletedProcess` access
+- **TextTools**: Bash text-processing idioms (`grep`, `sed`, `awk`, `tr`, `cut`, `head`, `tail`, `wc`, `sort`, `uniq`) for parsing command output
 - **SystemInfo**: System information helpers — serial number, console user, hostname
 - **MdmLogger**: Structured logging with file output, rotation, and multiple log levels
 - **WebhookSender**: Send logs and metadata to webhooks with optional custom headers
@@ -23,6 +24,7 @@ A Python utility package for macOS MDM deployment scripts, built for [MacAdmins 
 | ParamParser (Jamf) | Yes | — |
 | Dialog (swiftDialog) | Yes | Graceful no-op |
 | CommandRunner | Yes | Yes |
+| TextTools | Yes | Yes |
 | SystemInfo | Yes | Yes |
 | MdmLogger | Yes | Yes |
 | WebhookSender | Yes | Yes |
@@ -149,6 +151,45 @@ output = runner.run(["ls", "-la"], cwd="/tmp")
 runner = CommandRunner(logger=logger, username="jappleseed", uid=501)
 output = runner.run_as_user(["/usr/bin/open", "-a", "Safari"])
 ```
+
+### Bash Text Processing
+
+`TextTools` ports the most common Unix text commands to Python — useful when
+migrating MacAdmin bash scripts that lean on `grep`, `sed`, `awk`, and friends
+to parse output from `system_profiler`, `scutil`, `defaults`, `log show`, or
+`/etc/passwd`. The implementation is stdlib-only and platform-agnostic, but
+the API and examples are positioned for macOS MacAdmin workflows.
+
+```python
+from pymdm import TextTools
+
+tools = TextTools(logger=logger)
+
+# grep -i 'error' on log output
+errors = tools.grep(r"error", log_output, ignore_case=True)
+
+# awk -F: '{print $1}' /etc/passwd
+usernames = tools.awk(passwd_text, field=1, delimiter=":")
+
+# sed 's/old/new/g'
+patched = tools.sed(r"old", "new", content)
+
+# sort | uniq -c idiom — count occurrences
+sorted_lines = tools.sort(["http", "ssh", "http", "ftp", "ssh", "http"])
+counts = tools.uniq(sorted_lines, count=True)
+# -> ["1 ftp", "3 http", "2 ssh"]
+
+# tr '[:lower:]' '[:upper:]'
+upper = tools.tr("abcdefghijklmnopqrstuvwxyz",
+                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "hello")
+
+# head / tail / wc / cut all available too
+first_five = tools.head(output, lines=5)
+stats = tools.wc(output)  # {"lines": N, "words": N, "chars": N}
+```
+
+Each method accepts input as either a multi-line `str` or a `list[str]`. Pass
+an optional `MdmLogger` to the constructor for debug-level call tracing.
 
 ### System Information
 

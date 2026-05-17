@@ -25,6 +25,7 @@ from .dialog import (
 from .logger import MdmLogger
 from .param_parser import ParamParser
 from .system_info import SystemInfo
+from .text_tools import TextTools
 from .webhook_sender import WebhookSender
 
 __all__ = [
@@ -41,6 +42,7 @@ __all__ = [
     "SystemInfo",
     "SystemNotification",
     "TextField",
+    "TextTools",
     "WebhookSender",
     "__version__",
 ]

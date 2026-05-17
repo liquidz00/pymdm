@@ -55,6 +55,7 @@ The public API in `src/pymdm/__init__.py` re-exports user-facing classes. Severa
 - `MdmLogger` (`logger.py`) — structured logging with size-based rotation. `max_bytes` is a constructor parameter (defaults to 100 MB, `MAX_BYTES`). Backups land at `<logfile>.old`.
 - `WebhookSender` (`webhook_sender.py`) — `requests`-based poster with optional auth headers. `requests` is **lazy-imported**: the package imports cleanly without it; `_import_requests()` raises a guided `ImportError` at first call if missing.
 - `Dialog` (`dialog.py`) — swiftDialog integration, macOS-only (gracefully no-ops elsewhere).
+- `TextTools` (`text_tools.py`) — bash-equivalent text utilities (`grep`, `sed`, `awk`, `tr`, `cut`, `head`, `tail`, `wc`, `sort`, `uniq`); instance-based; accepts optional `MdmLogger`; stdlib-only and platform-agnostic but positioned for MacAdmin scripts.
 
 ### 4. DarwinDefaults user-context API (v0.6+)
 
