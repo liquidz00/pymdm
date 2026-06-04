@@ -92,12 +92,18 @@ except Exception as e:
 ### macOS Defaults and Services
 
 ```python
+from pymdm import CommandRunner
 from pymdm.platforms.darwin import DarwinDefaults, DarwinServiceManager
 
-# Read/write macOS defaults
-val = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
-DarwinDefaults.write("com.example.app", "Enabled", "true", "-bool")
-DarwinDefaults.delete("com.example.app", "OldSetting")
+# Read/write macOS defaults (instance-based as of v0.6.0)
+defaults = DarwinDefaults()
+val = defaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+defaults.write("com.example.app", "Enabled", "true", "-bool")
+defaults.delete("com.example.app", "OldSetting")
+
+# User-context writes: pass a CommandRunner with the console user's uid
+runner = CommandRunner(username="jappleseed", uid=501)
+DarwinDefaults(runner=runner).write("com.apple.dock", "tilesize", "48", "-int", as_user=True)
 
 # Manage launchd services
 if DarwinServiceManager.is_loaded("system/com.example.daemon"):

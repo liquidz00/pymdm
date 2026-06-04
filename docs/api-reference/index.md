@@ -10,6 +10,7 @@ Complete API documentation for all pymdm modules.
 - [MdmLogger](logger) -- Structured logging with rotation
 - [SystemInfo](system-info) -- Cross-platform system information
 - [WebhookSender](webhook-sender) -- HTTP webhook sender
+- [TextTools](text-tools) -- awk, sort, and uniq for parsing command output
 - [ParamParser](param-parser) -- Jamf Pro parameter parsing
 - [Dialog](dialog) -- swiftDialog integration (macOS)
 

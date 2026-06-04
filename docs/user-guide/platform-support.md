@@ -11,6 +11,7 @@ pymdm supports macOS (Jamf Pro) and Windows (Intune) managed endpoints.
 | ParamParser (Jamf) | Yes | -- |
 | Dialog (swiftDialog) | Yes | Graceful no-op |
 | CommandRunner | Yes | Yes |
+| TextTools | Yes | Yes |
 | SystemInfo | Yes | Yes |
 | MdmLogger | Yes | Yes |
 | WebhookSender | Yes | Yes |
@@ -38,3 +39,13 @@ from pymdm.mdm import get_provider
 platform = get_platform()    # DarwinPlatformInfo or Win32PlatformInfo
 provider = get_provider()    # JamfParamParser or IntuneParamProvider
 ```
+
+## Task Mapping: Jamf vs Intune
+
+| Jamf Pro | Intune Equivalent | pymdm API |
+|---|---|---|
+| `ParamParser.get(4)` | `IntuneParamProvider().get("PARAM_NAME")` | `get_provider().get(...)` |
+| `ParamParser.get_bool(5)` | `IntuneParamProvider().get_bool("FLAG")` | `get_provider().get_bool(...)` |
+| Script params via `sys.argv[4-11]` | Env vars or `sys.argv` | Provider-specific |
+| `jamf recon` | Microsoft Graph API | Not in pymdm (use provider SDK) |
+| swiftDialog | Windows toast/WPF | `Dialog` (macOS only) |

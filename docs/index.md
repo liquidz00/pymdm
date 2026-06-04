@@ -16,12 +16,17 @@ A cross-platform Python utility package for MDM deployment scripts, built for [M
 
 ## Features
 
-:::::{grid} 2
+:::::{grid} 1 2 2 2
+:gutter: 2
+:padding: 0
+:class-row: surface
+
 ::::{grid-item-card} {iconify}`mdi:console` Core
 - **CommandRunner** — Subprocess execution with credential sanitization and `check=False` mode
 - **MdmLogger** — Structured logging with file output and rotation
 - **SystemInfo** — Serial number, console user, hostname across platforms
 - **WebhookSender** — Webhook delivery with optional custom headers
+- **TextTools** — awk, sort, and uniq for parsing command output
 ::::
 
 ::::{grid-item-card} {iconify}`mdi:cellphone-link` MDM Parameters
@@ -75,6 +80,7 @@ api-reference/command-runner
 api-reference/logger
 api-reference/system-info
 api-reference/webhook-sender
+api-reference/text-tools
 api-reference/param-parser
 api-reference/dialog
 api-reference/platforms-darwin
