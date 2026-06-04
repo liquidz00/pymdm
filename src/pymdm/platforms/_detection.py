@@ -17,7 +17,8 @@ from ._base import PlatformCommandSupport, PlatformInfo
 
 @lru_cache(maxsize=1)
 def get_platform() -> PlatformInfo:
-    """Auto-detect and return the platform-specific PlatformInfo implementation.
+    """
+    Auto-detect and return the platform-specific PlatformInfo implementation.
 
     The detection order is:
     1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32")
@@ -48,7 +49,8 @@ def get_platform() -> PlatformInfo:
 
 @lru_cache(maxsize=1)
 def get_command_support() -> PlatformCommandSupport:
-    """Auto-detect and return the platform-specific PlatformCommandSupport implementation.
+    """
+    Auto-detect and return the platform-specific PlatformCommandSupport implementation.
 
     The detection order is:
     1. ``PYMDM_PLATFORM`` environment variable (values: "darwin", "win32")
@@ -78,7 +80,8 @@ def get_command_support() -> PlatformCommandSupport:
 
 
 def clear_platform_cache() -> None:
-    """Clear the cached platform instances.
+    """
+    Clear the cached platform instances.
 
     Useful for testing when you need to switch platform implementations
     between tests by changing the PYMDM_PLATFORM environment variable.

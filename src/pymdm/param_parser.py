@@ -14,7 +14,8 @@ _jamf_parser = JamfParamParser()
 
 
 class ParamParser:
-    """Helper class for parsing MDM script parameters.
+    """
+    Helper class for parsing MDM script parameters.
 
     This class preserves full backward compatibility with the original
     Jamf-specific ParamParser. All static methods delegate to

@@ -12,7 +12,8 @@ import sys
 
 
 class JamfParamParser:
-    """Jamf Pro parameter parser.
+    """
+    Jamf Pro parameter parser.
 
     Jamf Pro reserves parameters 0-3:
     - $0 = Script name
@@ -25,18 +26,14 @@ class JamfParamParser:
     Satisfies the MdmParamProvider protocol.
     """
 
-    # Jamf reserves parameters 0-3
-    # $0 = Script name
-    # $1 = Mount point of the target drive
-    # $2 = Computer name
-    # $3 = Username of logged in user
     _RESERVED_PARAMS = (0, 1, 2, 3)
     _MIN_USABLE_PARAM = 4
     _MAX_USABLE_PARAM = 11
 
     @staticmethod
     def _validate_index(index: int) -> None:
-        """Validates the parameter index is usable.
+        """
+        Validates the parameter index is usable.
 
         :param index: Parameter index to validate
         :type index: int
@@ -54,7 +51,8 @@ class JamfParamParser:
             )
 
     def get(self, key: int | str) -> str | None:
-        """Safely retrieve Jamf parameter by index.
+        """
+        Safely retrieve Jamf parameter by index.
 
         :param key: Parameter index (must be int in range 4-11)
         :type key: int | str
@@ -71,7 +69,8 @@ class JamfParamParser:
         return sys.argv[key] if len(sys.argv) > key else None
 
     def get_bool(self, key: int | str) -> bool:
-        """Get a Jamf parameter and convert to boolean.
+        """
+        Get a Jamf parameter and convert to boolean.
 
         :param key: Parameter index (must be int in range 4-11)
         :type key: int | str
@@ -84,7 +83,8 @@ class JamfParamParser:
         return value.strip().lower() in ("true", "1", "yes", "y")
 
     def get_int(self, key: int | str, default: int = 0) -> int:
-        """Get a Jamf parameter and convert to integer.
+        """
+        Get a Jamf parameter and convert to integer.
 
         :param key: Parameter index (must be int in range 4-11)
         :type key: int | str

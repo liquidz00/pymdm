@@ -13,7 +13,8 @@ import sys
 
 
 class IntuneParamProvider:
-    """Intune parameter provider.
+    """
+    Intune parameter provider.
 
     Intune scripts can receive parameters in multiple ways:
     1. Command-line arguments (sys.argv) -- addressed by integer key
@@ -37,7 +38,8 @@ class IntuneParamProvider:
 
     @staticmethod
     def _get_env(name: str) -> str | None:
-        """Look up an environment variable with optional INTUNE_ prefix.
+        """
+        Look up an environment variable with optional INTUNE_ prefix.
 
         Tries the exact name first, then with INTUNE_ prefix.
 
@@ -53,10 +55,11 @@ class IntuneParamProvider:
         return os.environ.get(f"INTUNE_{name}")
 
     def get(self, key: int | str) -> str | None:
-        """Get a script parameter by key.
+        """
+        Get a script parameter by key.
 
         Integer keys are looked up in sys.argv. String keys are looked
-        up as environment variables (with optional INTUNE_ prefix fallback).
+        up as environment variables (with optional ``INTUNE_`` prefix fallback).
 
         :param key: Parameter key (int for argv index, str for env var name)
         :type key: int | str
@@ -70,7 +73,8 @@ class IntuneParamProvider:
         return None
 
     def get_bool(self, key: int | str) -> bool:
-        """Get a script parameter and convert to boolean.
+        """
+        Get a script parameter and convert to boolean.
 
         :param key: Parameter key
         :type key: int | str
@@ -83,7 +87,8 @@ class IntuneParamProvider:
         return value.strip().lower() in ("true", "1", "yes", "y")
 
     def get_int(self, key: int | str, default: int = 0) -> int:
-        """Get a script parameter and convert to integer.
+        """
+        Get a script parameter and convert to integer.
 
         :param key: Parameter key
         :type key: int | str

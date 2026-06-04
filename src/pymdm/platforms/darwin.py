@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
 
 class DarwinPlatformInfo:
-    """macOS implementation of PlatformInfo.
+    """
+    macOS implementation of PlatformInfo.
 
     Retrieves system information using macOS-specific binaries:
     - system_profiler for serial numbers
@@ -38,7 +39,8 @@ class DarwinPlatformInfo:
     )
 
     def get_serial_number(self) -> str | None:
-        """Get serial number via system_profiler.
+        """
+        Get serial number via system_profiler.
 
         :return: Hardware serial number, or None on failure
         :rtype: str | None
@@ -54,7 +56,8 @@ class DarwinPlatformInfo:
             return None
 
     def get_console_user(self) -> tuple[str, int, Path] | None:
-        """Get the currently logged-in console user on macOS.
+        """
+        Get the currently logged-in console user on macOS.
 
         Uses ``stat -f%Su /dev/console`` to determine the console owner,
         then ``id -u`` for the UID, and constructs the home path under /Users/.
@@ -81,7 +84,8 @@ class DarwinPlatformInfo:
         return (username, uid, home_path) if home_path.exists() else None
 
     def get_hostname(self) -> str:
-        """Retrieve system hostname.
+        """
+        Retrieve system hostname.
 
         :return: System hostname
         :rtype: str
@@ -89,7 +93,8 @@ class DarwinPlatformInfo:
         return default_get_hostname()
 
     def get_user_full_name(self, username: str) -> str | None:
-        """Get full name for a user via ``id -F`` (macOS-specific).
+        """
+        Get full name for a user via ``id -F`` (macOS-specific).
 
         :param username: Username to look up
         :type username: str
@@ -102,7 +107,8 @@ class DarwinPlatformInfo:
             return None
 
     def get_os_version_label(self) -> str:
-        """Return macOS version label for logging.
+        """
+        Return macOS version label for logging.
 
         Reads the marketing macOS productVersion (e.g. "15.4.1", "26.4.1")
         from ``platform.mac_ver()``. ``platform.release()`` was used previously
@@ -121,14 +127,16 @@ class DarwinPlatformInfo:
 
 
 class DarwinCommandSupport:
-    """macOS implementation of PlatformCommandSupport.
+    """
+    macOS implementation of PlatformCommandSupport.
 
     Uses ``launchctl asuser`` to run commands in the context of a logged-in user.
     """
 
     @property
     def min_user_uid(self) -> int:
-        """Minimum UID for non-system accounts on macOS (500).
+        """
+        Minimum UID for non-system accounts on macOS (500).
 
         :return: 500
         :rtype: int
@@ -136,7 +144,8 @@ class DarwinCommandSupport:
         return 500
 
     def run_as_user_command(self, command: list[str], username: str, uid: int) -> list[str]:
-        """Wrap command with ``launchctl asuser`` for macOS.
+        """
+        Wrap command with ``launchctl asuser`` for macOS.
 
         :param command: Original command arguments
         :type command: list[str]
@@ -158,7 +167,8 @@ class DarwinCommandSupport:
         ]
 
     def validate_user(self, username: str | None, uid: int | None) -> bool:
-        """Validate user info for macOS.
+        """
+        Validate user info for macOS.
 
         Returns False if username/uid are missing, username has invalid
         characters, or UID is below the non-system threshold (500).
@@ -180,7 +190,8 @@ class DarwinCommandSupport:
 
 
 class DarwinDefaults:
-    """Read, write, and delete macOS user defaults (plist) values.
+    """
+    Read, write, and delete macOS user defaults (plist) values.
 
     Wraps ``/usr/bin/defaults`` for non-raising plist operations: all methods
     return ``None`` or ``False`` on failure instead of raising.
@@ -207,7 +218,8 @@ class DarwinDefaults:
     """
 
     def __init__(self, runner: CommandRunner | None = None) -> None:
-        """Construct a DarwinDefaults handler.
+        """
+        Construct a DarwinDefaults handler.
 
         :param runner: Optional CommandRunner. Required for ``as_user=True``
             calls; ignored otherwise. The runner must have ``username`` and
@@ -217,7 +229,8 @@ class DarwinDefaults:
         self._runner = runner
 
     def read(self, domain: str, key: str, *, as_user: bool = False) -> str | None:
-        """Read a defaults value by domain and key.
+        """
+        Read a defaults value by domain and key.
 
         :param domain: The plist domain (e.g., "com.apple.finder")
         :type domain: str
@@ -244,7 +257,8 @@ class DarwinDefaults:
         *,
         as_user: bool = False,
     ) -> bool:
-        """Write a defaults value.
+        """
+        Write a defaults value.
 
         :param domain: The plist domain
         :type domain: str
@@ -263,7 +277,8 @@ class DarwinDefaults:
         return self._exec(cmd, as_user=as_user).returncode == 0
 
     def delete(self, domain: str, key: str, *, as_user: bool = False) -> bool:
-        """Delete a defaults key.
+        """
+        Delete a defaults key.
 
         :param domain: The plist domain
         :type domain: str
@@ -278,7 +293,8 @@ class DarwinDefaults:
         return self._exec(cmd, as_user=as_user).returncode == 0
 
     def _exec(self, cmd: list[str], *, as_user: bool) -> subprocess.CompletedProcess[str]:
-        """Dispatch a defaults command in the appropriate user context.
+        """
+        Dispatch a defaults command in the appropriate user context.
 
         When ``as_user=True``, requires the instance to have been constructed
         with a CommandRunner that has username and uid set; raises
@@ -301,7 +317,8 @@ class DarwinDefaults:
 
 
 class DarwinServiceManager:
-    """Manage launchd services on macOS.
+    """
+    Manage launchd services on macOS.
 
     Wraps ``/bin/launchctl`` for checking, loading, and unloading services.
     Targets use the launchctl domain-target format:
@@ -315,7 +332,8 @@ class DarwinServiceManager:
 
     @staticmethod
     def is_loaded(target: str) -> bool:
-        """Check if a launchd service is loaded.
+        """
+        Check if a launchd service is loaded.
 
         :param target: Service target (e.g., "system/com.example.daemon")
         :type target: str
@@ -331,7 +349,8 @@ class DarwinServiceManager:
 
     @staticmethod
     def bootout(target: str) -> bool:
-        """Unload a launchd service.
+        """
+        Unload a launchd service.
 
         :param target: Service target (e.g., "system/com.example.daemon")
         :type target: str
@@ -347,7 +366,8 @@ class DarwinServiceManager:
 
     @staticmethod
     def bootstrap(domain_target: str, plist_path: str) -> bool:
-        """Load a launchd service from a plist.
+        """
+        Load a launchd service from a plist.
 
         :param domain_target: Domain target (e.g., "system" or "gui/501")
         :type domain_target: str

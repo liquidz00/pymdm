@@ -14,15 +14,17 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class MdmParamProvider(Protocol):
-    """Protocol for MDM provider-specific script parameter parsing.
+    """
+    Protocol for MDM provider-specific script parameter parsing.
 
     Each MDM provider handles script parameters differently:
-    - Jamf Pro: positional args via sys.argv[4..11]
+    - Jamf Pro: positional args via `sys.argv[4..11]`
     - Intune: environment variables or command-line arguments
     """
 
     def get(self, key: int | str) -> str | None:
-        """Get a script parameter by key.
+        """
+        Get a script parameter by key.
 
         :param key: Parameter key (int index for Jamf, str name for Intune)
         :type key: int | str
@@ -32,7 +34,8 @@ class MdmParamProvider(Protocol):
         ...
 
     def get_bool(self, key: int | str) -> bool:
-        """Get a script parameter and convert to boolean.
+        """
+        Get a script parameter and convert to boolean.
 
         :param key: Parameter key
         :type key: int | str
@@ -42,7 +45,8 @@ class MdmParamProvider(Protocol):
         ...
 
     def get_int(self, key: int | str, default: int = 0) -> int:
-        """Get a script parameter and convert to integer.
+        """
+        Get a script parameter and convert to integer.
 
         :param key: Parameter key
         :type key: int | str
@@ -55,7 +59,8 @@ class MdmParamProvider(Protocol):
 
 
 def get_provider(provider: str | None = None) -> MdmParamProvider:
-    """Get the MDM parameter provider instance.
+    """
+    Get the MDM parameter provider instance.
 
     Detection order:
     1. Explicit ``provider`` argument ("jamf" or "intune")
