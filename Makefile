@@ -54,7 +54,7 @@ test-cov-html:  ## Generate HTML coverage report under coverage/htmlcov/
 	$(UV) run pytest tests/ --cov=src --cov-report=html
 	@echo "Coverage report generated in htmlcov/index.html"
 
-docs: install  ## Build Sphinx documentation into docs/_build/
+docs: install-dev  ## Build Sphinx documentation into docs/_build/
 	$(UV) run sphinx-build -b html docs/ docs/_build/
 
 build:  ## Build sdist and wheel under dist/
