@@ -68,8 +68,8 @@ alwaysApply: true
 
 ## Architecture
 
-- Two orthogonal Protocol-based abstraction layers (platforms + mdm). See `pymdm-architecture.mdc`.
-- Don't convert Protocols to ABCs — keep `@runtime_checkable` so implementations don't need to inherit.
+- Two orthogonal abstraction layers (platforms + mdm). See `pymdm-architecture.mdc`.
+- Platforms use `@runtime_checkable` Protocols — keep them Protocols (implementations don't inherit). The mdm layer is deliberately an ABC (`MdmParamParser`) because it carries shared coercion code and pymdm owns every provider.
 
 ## What this codebase is NOT
 

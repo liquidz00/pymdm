@@ -30,8 +30,8 @@ A cross-platform Python utility package for MDM deployment scripts, built for [M
 ::::
 
 ::::{grid-item-card} {iconify}`mdi:cellphone-link` MDM Parameters
-- **ParamParser** — Jamf Pro script parameters 4-11
-- **IntuneParamProvider** — Env var and argv parsing for Intune
+- **JamfParamParser** — Jamf Pro script parameters 4-11
+- **IntuneParamParser** — Env var and argv parsing for Intune
 - **Dialog** — swiftDialog integration (macOS)
 ::::
 
@@ -81,7 +81,6 @@ api-reference/logger
 api-reference/system-info
 api-reference/webhook-sender
 api-reference/text-tools
-api-reference/param-parser
 api-reference/dialog
 api-reference/platforms-darwin
 api-reference/platforms-win32

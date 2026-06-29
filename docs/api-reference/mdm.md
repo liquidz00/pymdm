@@ -11,6 +11,15 @@ MDM provider abstraction for Jamf Pro and Intune parameter parsing.
 .. autofunction:: pymdm.mdm.get_provider
 ```
 
+## GenericParamParser
+
+```{eval-rst}
+.. autoclass:: pymdm.mdm.GenericParamParser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ## JamfParamParser
 
 ```{eval-rst}
@@ -20,10 +29,10 @@ MDM provider abstraction for Jamf Pro and Intune parameter parsing.
    :show-inheritance:
 ```
 
-## IntuneParamProvider
+## IntuneParamParser
 
 ```{eval-rst}
-.. autoclass:: pymdm.mdm.IntuneParamProvider
+.. autoclass:: pymdm.mdm.IntuneParamParser
    :members:
    :undoc-members:
    :show-inheritance:

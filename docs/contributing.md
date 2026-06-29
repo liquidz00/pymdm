@@ -65,12 +65,12 @@ now instantiate (DarwinDefaults() preserves prior root-context behavior).
 
 ## Architecture orientation
 
-pymdm has two orthogonal Protocol-based abstraction layers:
+pymdm has two orthogonal abstraction layers:
 
-- **Platform layer** (`src/pymdm/platforms/`) — OS-specific operations (Darwin, Win32)
-- **MDM provider layer** (`src/pymdm/mdm/`) — Jamf vs Intune script parameter conventions
+- **Platform layer** (`src/pymdm/platforms/`) — OS-specific operations (Darwin, Win32). Defined by `PlatformInfo` and `PlatformCommandSupport` Protocols.
+- **MDM provider layer** (`src/pymdm/mdm/`) — Jamf vs Intune script parameter conventions. Defined by the `MdmParamParser` ABC, with `GenericParamParser` as the shared positional base.
 
-Public-facing classes (`SystemInfo`, `ParamParser`) are thin facades over these layers. **Preserve the facade pattern when refactoring** — many consumers depend on the static-method API.
+`SystemInfo` is a thin facade over the platform layer. The MDM provider layer is reached through `get_provider()`, which returns the right `MdmParamParser` subclass.
 
 Detection factories (`get_platform()`, `get_command_support()`, `get_provider()`) read environment variables (`PYMDM_PLATFORM`, `PYMDM_MDM_PROVIDER`) before falling back to `sys.platform`. Tests that flip platforms mid-run must call `clear_platform_cache()`.
 
@@ -78,7 +78,7 @@ For deeper agent-ready guidance, see [CLAUDE.md](https://github.com/liquidz00/py
 
 ## Adding a new platform or MDM provider
 
-1. Implement the relevant Protocol (`PlatformInfo` + `PlatformCommandSupport` for OS, `MdmParamProvider` for MDM).
+1. Implement the relevant contract (`PlatformInfo` + `PlatformCommandSupport` Protocols for OS; subclass the `MdmParamParser` ABC, or `GenericParamParser`, for MDM).
 2. Add detection arms to `_detection.py` (platforms) or `_base.py::get_provider` (MDM).
 3. Mirror the existing test files (`test_platforms_<name>.py` or `test_mdm_<name>.py`).
 4. Update `README.md` install paths if the new platform changes the dependency story.

@@ -12,15 +12,16 @@ Write your first MDM deployment script with pymdm.
 
 from pymdm import (
     MdmLogger,
-    ParamParser,
     CommandRunner,
     SystemInfo,
     WebhookSender,
 )
+from pymdm.mdm import get_provider
 
 # Setup
+params = get_provider("jamf")    # explicit; get_provider() now defaults to GenericParamParser
 logger = MdmLogger(
-    debug=ParamParser.get_bool(4),
+    debug=params.get_bool(4),
     output_path="/var/log/my_script.log",
 )
 runner = CommandRunner(logger=logger)
@@ -40,7 +41,7 @@ try:
     if result.returncode != 0:
         logger.warn(f"Tool exited {result.returncode}")
 
-    webhook = WebhookSender(url=ParamParser.get(5), logger=logger)
+    webhook = WebhookSender(url=params.get(5), logger=logger)
     webhook.send(hostname=hostname, serial=serial, status="success")
 
 except Exception as e:
@@ -53,9 +54,9 @@ except Exception as e:
 """Example Intune deployment script."""
 
 from pymdm import MdmLogger, CommandRunner, SystemInfo, WebhookSender
-from pymdm.mdm import IntuneParamProvider
+from pymdm.mdm import get_provider
 
-params = IntuneParamProvider()
+params = get_provider()    # IntuneParamParser on Windows
 logger = MdmLogger(
     debug=params.get_bool("DEBUG"),
     output_path=r"C:\ProgramData\Scripts\my_script.log",
