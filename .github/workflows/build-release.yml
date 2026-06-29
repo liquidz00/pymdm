@@ -58,11 +58,11 @@ jobs:
 
       - name: Publish package to PyPI
         id: publish_pypi
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
 
       - name: Get Changelog updates
         id: changelog_reader
-        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656  # v2.2.3
+        uses: mindsers/changelog-reader-action@1faaf50aa09d5793d9a100819973df801febfb31  # v2.4.0
         with:
           validation_depth: 100
           version: v${{ env.VERSION }}
