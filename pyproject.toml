@@ -12,10 +12,7 @@ requires-python = ">=3.12"
 requests = [
     "requests>=2.32.5",
 ]
-# Marker extra for users running under MacAdmins managed_python3 (which
-# already bundles `requests`). Empty on purpose — prevents pip from
-# pulling a duplicate `requests` while still letting users signal intent
-# (e.g. `pip install pymdm[managed]`).
+# Marker extra for users running under MacAdmins managed_python3
 managed = []
 docs = [
     "myst-parser",
@@ -49,7 +46,6 @@ where = ["src"]
 include = ["pymdm*"]
 
 [tool.setuptools.package-data]
-# Ship the PEP 561 marker so downstream consumers get our type hints.
 pymdm = ["py.typed"]
 
 [tool.setuptools.dynamic]

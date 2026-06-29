@@ -10,6 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `TextTools` — a small helper for the handful of Unix text idioms whose Python equivalent is non-obvious: `awk` (field extraction by delimiter), `sort` (multi-key, numeric-aware), and `uniq` (with `sort | uniq -c`-style counts). Each method accepts a multi-line `str` or a `list[str]`, and an optional `MdmLogger` enables debug-level call tracing
+- `GenericParamParser` — a neutral positional `sys.argv` parameter parser. It is the new safe default for any platform or provider that isn't specifically Jamf or Intune
+- `get_provider()` is now exported at the top level (`from pymdm import get_provider`)
+- `PYMDM_MDM_PROVIDER` accepts a new `generic` value
+
+### Changed
+
+- **BREAKING:** the MDM provider layer moved from a `typing.Protocol` (`MdmParamProvider`) to an abstract base class (`MdmParamParser`). Providers now inherit — `JamfParamParser` and `IntuneParamParser` extend `GenericParamParser` — and the shared `get_bool` / `get_int` coercion lives once on the base instead of being duplicated per provider
+- **BREAKING:** `IntuneParamProvider` renamed to `IntuneParamParser` for naming consistency across providers
+- **BREAKING:** `get_provider()` no longer defaults macOS to Jamf. With no explicit provider and no `PYMDM_MDM_PROVIDER`, it now returns `GenericParamParser` on macOS (and any non-Windows platform) and `IntuneParamParser` only on Windows. Jamf shops should pass `get_provider("jamf")` or set `PYMDM_MDM_PROVIDER=jamf`. This removes a dangerous assumption that broke non-Jamf macOS fleets (Kandji, Mosyle), whose own `sys.argv` indices were rejected by Jamf's reserved-index guard
+
+### Removed
+
+- **BREAKING:** the top-level `ParamParser` Jamf facade. Replace `ParamParser.get(4)` / `ParamParser.get_bool(4)` with `get_provider().get(4)` / `get_provider().get_bool(4)` (importing via `from pymdm.mdm import get_provider`), or instantiate `JamfParamParser()` directly
+- Dead backward-compat cruft in `system_info.py` (`_get_invalid_users`, duplicated `_INVALID_USERS`)
+
 ## [v0.6.0] - 2026-05-09
 
 ### Added

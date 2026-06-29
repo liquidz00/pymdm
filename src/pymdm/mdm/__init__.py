@@ -6,13 +6,14 @@ and MDM-specific operations. Auto-detects or allows explicit selection
 of the MDM provider (Jamf Pro, Intune, etc.).
 """
 
-from ._base import MdmParamProvider, get_provider
-from .intune import IntuneParamProvider
+from ._base import GenericParamParser, MdmParamParser, get_provider
+from .intune import IntuneParamParser
 from .jamf import JamfParamParser
 
 __all__ = [
-    "IntuneParamProvider",
+    "GenericParamParser",
+    "IntuneParamParser",
     "JamfParamParser",
-    "MdmParamProvider",
+    "MdmParamParser",
     "get_provider",
 ]

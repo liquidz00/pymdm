@@ -12,15 +12,16 @@ Write your first MDM deployment script with pymdm.
 
 from pymdm import (
     MdmLogger,
-    ParamParser,
     CommandRunner,
     SystemInfo,
     WebhookSender,
 )
+from pymdm.mdm import get_provider
 
 # Setup
+params = get_provider("jamf")    # explicit; get_provider() now defaults to GenericParamParser
 logger = MdmLogger(
-    debug=ParamParser.get_bool(4),
+    debug=params.get_bool(4),
     output_path="/var/log/my_script.log",
 )
 runner = CommandRunner(logger=logger)
@@ -40,7 +41,7 @@ try:
     if result.returncode != 0:
         logger.warn(f"Tool exited {result.returncode}")
 
-    webhook = WebhookSender(url=ParamParser.get(5), logger=logger)
+    webhook = WebhookSender(url=params.get(5), logger=logger)
     webhook.send(hostname=hostname, serial=serial, status="success")
 
 except Exception as e:
@@ -53,9 +54,9 @@ except Exception as e:
 """Example Intune deployment script."""
 
 from pymdm import MdmLogger, CommandRunner, SystemInfo, WebhookSender
-from pymdm.mdm import IntuneParamProvider
+from pymdm.mdm import get_provider
 
-params = IntuneParamProvider()
+params = get_provider()    # IntuneParamParser on Windows
 logger = MdmLogger(
     debug=params.get_bool("DEBUG"),
     output_path=r"C:\ProgramData\Scripts\my_script.log",
@@ -92,12 +93,18 @@ except Exception as e:
 ### macOS Defaults and Services
 
 ```python
+from pymdm import CommandRunner
 from pymdm.platforms.darwin import DarwinDefaults, DarwinServiceManager
 
-# Read/write macOS defaults
-val = DarwinDefaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
-DarwinDefaults.write("com.example.app", "Enabled", "true", "-bool")
-DarwinDefaults.delete("com.example.app", "OldSetting")
+# Read/write macOS defaults (instance-based as of v0.6.0)
+defaults = DarwinDefaults()
+val = defaults.read("com.apple.finder", "ShowHardDrivesOnDesktop")
+defaults.write("com.example.app", "Enabled", "true", "-bool")
+defaults.delete("com.example.app", "OldSetting")
+
+# User-context writes: pass a CommandRunner with the console user's uid
+runner = CommandRunner(username="jappleseed", uid=501)
+DarwinDefaults(runner=runner).write("com.apple.dock", "tilesize", "48", "-int", as_user=True)
 
 # Manage launchd services
 if DarwinServiceManager.is_loaded("system/com.example.daemon"):

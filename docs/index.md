@@ -16,17 +16,22 @@ A cross-platform Python utility package for MDM deployment scripts, built for [M
 
 ## Features
 
-:::::{grid} 2
+:::::{grid} 1 2 2 2
+:gutter: 2
+:padding: 0
+:class-row: surface
+
 ::::{grid-item-card} {iconify}`mdi:console` Core
 - **CommandRunner** — Subprocess execution with credential sanitization and `check=False` mode
 - **MdmLogger** — Structured logging with file output and rotation
 - **SystemInfo** — Serial number, console user, hostname across platforms
 - **WebhookSender** — Webhook delivery with optional custom headers
+- **TextTools** — awk, sort, and uniq for parsing command output
 ::::
 
 ::::{grid-item-card} {iconify}`mdi:cellphone-link` MDM Parameters
-- **ParamParser** — Jamf Pro script parameters 4-11
-- **IntuneParamProvider** — Env var and argv parsing for Intune
+- **JamfParamParser** — Jamf Pro script parameters 4-11
+- **IntuneParamParser** — Env var and argv parsing for Intune
 - **Dialog** — swiftDialog integration (macOS)
 ::::
 
@@ -75,7 +80,7 @@ api-reference/command-runner
 api-reference/logger
 api-reference/system-info
 api-reference/webhook-sender
-api-reference/param-parser
+api-reference/text-tools
 api-reference/dialog
 api-reference/platforms-darwin
 api-reference/platforms-win32

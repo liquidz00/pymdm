@@ -79,7 +79,7 @@ $ pip install -e .
 ```bash
 $ git clone https://github.com/liquidz00/pymdm.git
 $ cd pymdm
-$ make install     # Install with dev dependencies (includes docs tooling)
+$ make install-dev # Install with dev dependencies (includes docs tooling)
 $ make test        # Run tests
 $ make format      # Format code with ruff
 $ make docs        # Build documentation locally

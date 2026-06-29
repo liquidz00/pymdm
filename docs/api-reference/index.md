@@ -10,7 +10,7 @@ Complete API documentation for all pymdm modules.
 - [MdmLogger](logger) -- Structured logging with rotation
 - [SystemInfo](system-info) -- Cross-platform system information
 - [WebhookSender](webhook-sender) -- HTTP webhook sender
-- [ParamParser](param-parser) -- Jamf Pro parameter parsing
+- [TextTools](text-tools) -- awk, sort, and uniq for parsing command output
 - [Dialog](dialog) -- swiftDialog integration (macOS)
 
 ## Platform Modules
@@ -20,4 +20,4 @@ Complete API documentation for all pymdm modules.
 
 ## MDM Provider Modules
 
-- [mdm](mdm) -- JamfParamParser, IntuneParamProvider, auto-detection
+- [mdm](mdm) -- GenericParamParser, JamfParamParser, IntuneParamParser, auto-detection

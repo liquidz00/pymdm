@@ -7,7 +7,7 @@ and Windows/Intune platforms.
 """
 
 __title__ = "pymdm"
-__version__ = "0.6.0"
+__version__ = "0.7.0.dev0"
 
 
 from .command_runner import CommandRunner
@@ -23,24 +23,26 @@ from .dialog import (
     TextField,
 )
 from .logger import MdmLogger
-from .param_parser import ParamParser
+from .mdm import get_provider
 from .system_info import SystemInfo
+from .text_tools import TextTools
 from .webhook_sender import WebhookSender
 
 __all__ = [
+    "get_provider",
     "CheckboxItem",
     "CommandRunner",
     "Dialog",
     "DialogExitCode",
     "DialogReturn",
     "DialogTemplate",
-    "ParamParser",
     "MdmLogger",
     "SelectItem",
     "SelectResult",
     "SystemInfo",
     "SystemNotification",
     "TextField",
+    "TextTools",
     "WebhookSender",
     "__version__",
 ]

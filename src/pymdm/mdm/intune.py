@@ -9,11 +9,13 @@ This provider supports both patterns.
 from __future__ import annotations
 
 import os
-import sys
+
+from ._base import GenericParamParser
 
 
-class IntuneParamProvider:
-    """Intune parameter provider.
+class IntuneParamParser(GenericParamParser):
+    """
+    Intune parameter parser.
 
     Intune scripts can receive parameters in multiple ways:
     1. Command-line arguments (sys.argv) -- addressed by integer key
@@ -24,11 +26,11 @@ class IntuneParamProvider:
     String keys are looked up as environment variables, optionally with an
     ``INTUNE_`` prefix.
 
-    Satisfies the MdmParamProvider protocol.
+    Extends GenericParamParser with environment-variable lookup for string keys.
 
     :Example:
 
-        >>> provider = IntuneParamProvider()
+        >>> provider = IntuneParamParser()
         >>> # Get from sys.argv[1]
         >>> value = provider.get(1)
         >>> # Get from environment variable
@@ -37,7 +39,8 @@ class IntuneParamProvider:
 
     @staticmethod
     def _get_env(name: str) -> str | None:
-        """Look up an environment variable with optional INTUNE_ prefix.
+        """
+        Look up an environment variable with optional INTUNE_ prefix.
 
         Tries the exact name first, then with INTUNE_ prefix.
 
@@ -53,10 +56,11 @@ class IntuneParamProvider:
         return os.environ.get(f"INTUNE_{name}")
 
     def get(self, key: int | str) -> str | None:
-        """Get a script parameter by key.
+        """
+        Get a script parameter by key.
 
         Integer keys are looked up in sys.argv. String keys are looked
-        up as environment variables (with optional INTUNE_ prefix fallback).
+        up as environment variables (with optional ``INTUNE_`` prefix fallback).
 
         :param key: Parameter key (int for argv index, str for env var name)
         :type key: int | str
@@ -64,38 +68,7 @@ class IntuneParamProvider:
         :rtype: str | None
         """
         if isinstance(key, int):
-            return sys.argv[key] if len(sys.argv) > key else None
+            return super().get(key)
         if isinstance(key, str):
             return self._get_env(key)
         return None
-
-    def get_bool(self, key: int | str) -> bool:
-        """Get a script parameter and convert to boolean.
-
-        :param key: Parameter key
-        :type key: int | str
-        :return: Boolean value (False if parameter is missing)
-        :rtype: bool
-        """
-        value = self.get(key)
-        if not value:
-            return False
-        return value.strip().lower() in ("true", "1", "yes", "y")
-
-    def get_int(self, key: int | str, default: int = 0) -> int:
-        """Get a script parameter and convert to integer.
-
-        :param key: Parameter key
-        :type key: int | str
-        :param default: Default value if parameter is missing or invalid
-        :type default: int
-        :return: Integer value
-        :rtype: int
-        """
-        value = self.get(key)
-        if not value:
-            return default
-        try:
-            return int(value.strip())
-        except ValueError:
-            return default

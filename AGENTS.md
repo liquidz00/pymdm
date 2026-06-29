@@ -50,7 +50,6 @@ src/pymdm/
 ├── logger.py               # MdmLogger — structured logging, size-based rotation (max_bytes)
 ├── webhook_sender.py       # WebhookSender — requests-based poster, requests is LAZY-IMPORTED
 ├── dialog.py               # swiftDialog integration, macOS-only (gracefully no-ops elsewhere)
-├── param_parser.py         # Backward-compat Jamf facade over JamfParamParser
 ├── system_info.py          # Backward-compat facade over get_platform()
 ├── platforms/              # OS abstraction layer
 │   ├── _base.py            # PlatformInfo + PlatformCommandSupport Protocols (@runtime_checkable)
@@ -58,9 +57,9 @@ src/pymdm/
 │   ├── darwin.py           # DarwinPlatformInfo, DarwinCommandSupport, DarwinDefaults, DarwinServiceManager
 │   └── win32.py            # Win32PlatformInfo, Win32CommandSupport, Win32Registry, Win32ServiceManager
 └── mdm/                    # MDM provider abstraction layer
-    ├── _base.py            # MdmParamProvider Protocol + get_provider() factory
-    ├── jamf.py             # JamfParamParser (sys.argv[4..11]; 0–3 reserved by Jamf)
-    └── intune.py           # IntuneParamProvider (env vars + argv)
+    ├── _base.py            # MdmParamParser ABC + GenericParamParser + get_provider() factory
+    ├── jamf.py             # JamfParamParser (extends Generic; sys.argv[4..11]; 0–3 reserved by Jamf)
+    └── intune.py           # IntuneParamParser (extends Generic; env vars + argv)
 
 tests/                      # pytest, flat layout, conftest.py with shared fixtures
 docs/                       # Sphinx + myst-parser; user-guide/, api-reference/
@@ -69,8 +68,8 @@ docs/                       # Sphinx + myst-parser; user-guide/, api-reference/
 
 ## Architecture
 
-Two **orthogonal** Protocol-based abstraction layers compose to handle the
-cross-platform / cross-MDM matrix:
+Two **orthogonal** abstraction layers compose to handle the
+cross-platform / cross-MDM matrix (platforms are Protocol-based, mdm is an ABC):
 
 1. **Platform layer** (`platforms/`) — OS-specific operations.
 2. **MDM provider layer** (`mdm/`) — script-parameter conventions per provider.
@@ -81,11 +80,10 @@ because the layers don't know about each other. Detection factories
 variables (`PYMDM_PLATFORM`, `PYMDM_MDM_PROVIDER`) before falling back to
 `sys.platform`.
 
-Several public-facing classes are **thin facades** over the layered
-implementations — preserve this when refactoring:
-
-- `ParamParser` (static methods) → delegates to a shared `JamfParamParser` instance.
-- `SystemInfo` (static methods) → delegates to `get_platform()`.
+`SystemInfo` (static methods) is a thin facade over the platform layer,
+delegating to `get_platform()`. The MDM layer has no facade — call
+`get_provider()` to get the right `MdmParamParser` subclass. (The old
+`ParamParser` Jamf facade was removed in 0.7.0, BREAKING.)
 
 `CommandRunner.run` and `run_as_user` carry `@overload` declarations for
 `check=True` vs `check=False` so type-checkers see the right return type.
@@ -134,12 +132,18 @@ pymdm is **not** async. There is no `asyncio`, no `httpx.AsyncClient`, no
 an async layer would only complicate the surface for no real benefit. Don't
 suggest async refactors.
 
-### Protocols, not ABCs
+### Protocol (platforms) vs ABC (mdm)
 
-Both abstraction layers use `typing.Protocol` with `@runtime_checkable`.
+The **platform layer** uses `typing.Protocol` with `@runtime_checkable`.
 Implementations DO NOT inherit from the Protocol — they satisfy it
-structurally. Don't convert Protocols to abstract base classes; structural
-subtyping is what makes mocking and parallel implementations easy.
+structurally. Keep it that way; structural subtyping is what makes mocking
+and parallel implementations easy.
+
+The **mdm layer** is deliberately an ABC (`MdmParamParser`). It was moved off
+Protocol because the layer carries shared coercion code (`get_bool`/`get_int`
+on the base) and pymdm owns every provider in-tree, so Protocol's headline
+benefit (works with classes you don't control) doesn't apply. Providers
+inherit: `JamfParamParser`/`IntuneParamParser` → `GenericParamParser` → `MdmParamParser`.
 
 ### Dependencies
 
@@ -248,9 +252,9 @@ unrelated PR; flag them in an issue and tackle separately.
   supported. Discuss in an issue first.
 
 - **More MDM providers.** Workspace ONE, Kandji, Mosyle, FileWave, JumpCloud,
-  Addigy — all reasonable additions, all currently absent. Each requires
-  Protocol implementation + tests + at least one tester with access to the
-  target system.
+  Addigy — all reasonable additions, all currently absent. Each requires a
+  new `MdmParamParser` subclass (often extending `GenericParamParser`) + tests
+  + at least one tester with access to the target system.
 
 - **Async refactor.** See "Synchronous, by design" above.
 

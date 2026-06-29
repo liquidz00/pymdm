@@ -41,20 +41,21 @@ Concrete implementations: `darwin.py` (`DarwinPlatformInfo`, `DarwinCommandSuppo
 
 ### 2. MDM layer (`src/pymdm/mdm/`)
 
-Abstracts **MDM provider** script-parameter conventions. `MdmParamProvider` protocol in `_base.py` defines `get` / `get_bool` / `get_int`. Implementations: `JamfParamParser` (reads `sys.argv[4..11]`; indices 0–3 are reserved by Jamf) and `IntuneParamProvider` (env vars or positional argv).
+Abstracts **MDM provider** script-parameter conventions. The `MdmParamParser` ABC in `_base.py` defines abstract `get` plus shared `get_bool` / `get_int`. `GenericParamParser` is the neutral positional base (plain `sys.argv`); `JamfParamParser` extends it with reserved-index validation (`sys.argv[4..11]`; 0–3 reserved by Jamf), and `IntuneParamParser` extends it with env-var lookup for string keys.
 
-`get_provider()` in `mdm/_base.py` dispatches on explicit arg → `PYMDM_MDM_PROVIDER` env var → platform default (`jamf` on darwin, `intune` on win32).
+`get_provider()` in `mdm/_base.py` dispatches on explicit arg → `PYMDM_MDM_PROVIDER` env var → platform default (`intune` on win32, `generic` everywhere else — macOS is NOT assumed to be Jamf).
 
 ### 3. Top-level facades
 
-The public API in `src/pymdm/__init__.py` re-exports user-facing classes. Several of these are thin **backward-compat facades** over the layered implementations — preserve this when refactoring:
+The public API in `src/pymdm/__init__.py` re-exports user-facing classes. `SystemInfo` is a thin facade over the layered implementation; the MDM layer is reached through `get_provider()` (no facade):
 
-- `ParamParser` (`param_parser.py`) — static-method facade that delegates to a shared `JamfParamParser` instance.
 - `SystemInfo` (`system_info.py`) — static-method facade that delegates to `get_platform()`.
+- MDM parameters — call `get_provider()` to get the right `MdmParamParser` subclass. (The old `ParamParser` Jamf facade was removed in 0.7.0, BREAKING.)
 - `CommandRunner` (`command_runner.py`) — uses `get_command_support()` for `run_as_user` wrapping and user validation; includes credential sanitization in `_sanitize_command` (ordering of regexes matters — more specific patterns first). Supports `check=False` to return `subprocess.CompletedProcess` directly, and `**kwargs` passthrough to `subprocess.run`.
 - `MdmLogger` (`logger.py`) — structured logging with size-based rotation. `max_bytes` is a constructor parameter (defaults to 100 MB, `MAX_BYTES`). Backups land at `<logfile>.old`.
 - `WebhookSender` (`webhook_sender.py`) — `requests`-based poster with optional auth headers. `requests` is **lazy-imported**: the package imports cleanly without it; `_import_requests()` raises a guided `ImportError` at first call if missing.
 - `Dialog` (`dialog.py`) — swiftDialog integration, macOS-only (gracefully no-ops elsewhere).
+- `TextTools` (`text_tools.py`) — bash-equivalent text utilities (`grep`, `sed`, `awk`, `tr`, `cut`, `head`, `tail`, `wc`, `sort`, `uniq`); instance-based; accepts optional `MdmLogger`; stdlib-only and platform-agnostic but positioned for MacAdmin scripts.
 
 ### 4. DarwinDefaults user-context API (v0.6+)
 
@@ -103,7 +104,7 @@ If you add new HTTP code, keep the lazy-import discipline. Don't `import request
 ## Conventions
 
 - `from __future__ import annotations` is used in the platform/mdm modules for forward refs. Follow this pattern in new modules that need it.
-- Protocols over ABCs — both abstraction layers use `typing.Protocol` with `@runtime_checkable` so implementations don't inherit. Don't convert to ABCs.
+- Platform layer uses `typing.Protocol` with `@runtime_checkable` (implementations don't inherit) — keep it that way. The mdm layer is deliberately an ABC (`MdmParamParser`): it carries shared `get_bool`/`get_int` and pymdm owns every provider, so structural typing buys nothing there.
 - Ruff is the single linter/formatter. Line length 100. Rules enabled: a narrow select (`E101`, `F401`, `F403`, `I001`, `N801`, `N802`, `N806`); `E722` is ignored; `__init__.py` files ignore `F401`.
 - pre-commit hooks in `.pre-commit-config.yaml`: ruff format + check, validate-pyproject, file hygiene, secrets detection. Run `make pre-commit-install` once per clone.
 - Tests mirror source file layout (`test_<module>.py`). Shared fixtures (`temp_dir`, `temp_log_file`, `mock_logger`) are in `tests/conftest.py`.
@@ -118,5 +119,5 @@ If you add new HTTP code, keep the lazy-import discipline. Don't `import request
 - `sphinx-docstrings.mdc` — Sphinx/reST docstring enforcement
 - `darwin-scripting.mdc` — macOS-specific patterns (paths, subprocess, TCC, defaults, launchctl)
 - `windows-scripting.mdc` — Windows-specific patterns (PowerShell, winreg, sc.exe, runas caveats)
-- `pymdm-architecture.mdc` — abstraction layer rules (Protocol, lazy imports, facades)
+- `pymdm-architecture.mdc` — abstraction layer rules (Protocol vs ABC, lazy imports, facade)
 - `testing-conventions.mdc` — pytest patterns specific to this repo

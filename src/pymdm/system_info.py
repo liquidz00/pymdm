@@ -12,29 +12,17 @@ from .platforms._detection import get_platform
 
 
 class SystemInfo:
-    """Helper class for retrieving system information commonly needed in MDM scripts.
+    """
+    Helper class for retrieving system information commonly needed in MDM scripts.
 
     This class delegates to platform-specific implementations while preserving
     the original static-method API for backward compatibility.
     """
 
-    # Expose invalid_users from the current platform for backward compatibility
-    @staticmethod
-    def _get_invalid_users() -> tuple[str, ...]:
-        """Get the invalid users tuple for the current platform.
-
-        :return: Tuple of usernames considered invalid
-        :rtype: tuple[str, ...]
-        """
-        return get_platform().invalid_users
-
-    # Keep _INVALID_USERS as a class-level descriptor for backward compatibility
-    # Code that accessed SystemInfo._INVALID_USERS directly will still work
-    _INVALID_USERS = ("root", "", "loginwindow", "_mbsetupuser")
-
     @staticmethod
     def get_serial_number() -> str | None:
-        """Get serial number of machine.
+        """
+        Get serial number of machine.
 
         Delegates to the platform-specific implementation.
 
@@ -45,7 +33,8 @@ class SystemInfo:
 
     @staticmethod
     def get_console_user() -> tuple[str, int, Path] | None:
-        """Get the currently logged in console user information.
+        """
+        Get the currently logged in console user information.
 
         Delegates to the platform-specific implementation.
 
@@ -56,7 +45,8 @@ class SystemInfo:
 
     @staticmethod
     def get_hostname() -> str:
-        """Retrieve system hostname.
+        """
+        Retrieve system hostname.
 
         :return: System hostname
         :rtype: str
@@ -65,7 +55,8 @@ class SystemInfo:
 
     @staticmethod
     def get_user_full_name(username: str) -> str | None:
-        """Get the full name for a given username.
+        """
+        Get the full name for a given username.
 
         Delegates to the platform-specific implementation.
 

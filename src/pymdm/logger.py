@@ -62,7 +62,8 @@ class MdmLogger:
 
     @staticmethod
     def _get_os_version_label() -> str:
-        """Get the OS version label from the platform layer.
+        """
+        Get the OS version label from the platform layer.
 
         Falls back to a generic label if the platform layer is unavailable.
 

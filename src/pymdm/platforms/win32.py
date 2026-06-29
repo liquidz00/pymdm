@@ -19,7 +19,8 @@ from ._base import default_get_hostname
 
 
 class Win32PlatformInfo:
-    """Windows implementation of PlatformInfo.
+    """
+    Windows implementation of PlatformInfo.
 
     Retrieves system information using Windows-specific commands:
     - PowerShell / wmic for serial numbers
@@ -35,7 +36,8 @@ class Win32PlatformInfo:
     )
 
     def get_serial_number(self) -> str | None:
-        """Get serial number via PowerShell (Get-CimInstance).
+        """
+        Get serial number via PowerShell (Get-CimInstance).
 
         Falls back to wmic if PowerShell is unavailable.
 
@@ -79,7 +81,8 @@ class Win32PlatformInfo:
         return None
 
     def get_console_user(self) -> tuple[str, int, Path] | None:
-        """Get the currently logged-in user on Windows.
+        """
+        Get the currently logged-in user on Windows.
 
         Uses os.getlogin() for the username, and Path.home() for the
         home directory. Windows does not use UIDs in the same way as
@@ -104,7 +107,8 @@ class Win32PlatformInfo:
         return (username, uid, home_path) if home_path.exists() else None
 
     def get_hostname(self) -> str:
-        """Retrieve system hostname.
+        """
+        Retrieve system hostname.
 
         :return: System hostname
         :rtype: str
@@ -112,7 +116,8 @@ class Win32PlatformInfo:
         return default_get_hostname()
 
     def get_user_full_name(self, username: str) -> str | None:
-        """Get full name for a Windows user via PowerShell or net user.
+        """
+        Get full name for a Windows user via PowerShell or net user.
 
         :param username: Username to look up
         :type username: str
@@ -155,7 +160,8 @@ class Win32PlatformInfo:
         return None
 
     def get_os_version_label(self) -> str:
-        """Return Windows version label for logging.
+        """
+        Return Windows version label for logging.
 
         :return: e.g. "Windows Version: 10.0.22631"
         :rtype: str
@@ -164,7 +170,8 @@ class Win32PlatformInfo:
 
 
 class Win32CommandSupport:
-    """Windows implementation of PlatformCommandSupport.
+    """
+    Windows implementation of PlatformCommandSupport.
 
     Uses ``runas`` for running commands as another user.
     Note: Windows ``runas`` prompts for a password interactively, so
@@ -174,7 +181,8 @@ class Win32CommandSupport:
 
     @property
     def min_user_uid(self) -> int:
-        """Minimum UID threshold on Windows.
+        """
+        Minimum UID threshold on Windows.
 
         Windows does not use numeric UIDs like Unix. This returns 0
         since UID validation is not applicable on Windows.
@@ -185,7 +193,8 @@ class Win32CommandSupport:
         return 0
 
     def run_as_user_command(self, command: list[str], username: str, uid: int) -> list[str]:
-        """Wrap command with ``runas`` for Windows.
+        """
+        Wrap command with ``runas`` for Windows.
 
         Note: ``runas`` requires interactive password input. For
         non-interactive execution in MDM contexts, consider using
@@ -212,7 +221,8 @@ class Win32CommandSupport:
         ]
 
     def validate_user(self, username: str | None, uid: int | None) -> bool:
-        """Validate user info for Windows.
+        """
+        Validate user info for Windows.
 
         On Windows, we only check that a username is provided and
         contains valid characters. UID is not used.
@@ -233,7 +243,8 @@ class Win32CommandSupport:
 
 
 class Win32Registry:
-    """Read, write, and delete Windows registry values.
+    """
+    Read, write, and delete Windows registry values.
 
     Wraps the ``winreg`` stdlib module for non-raising registry operations.
     Hive constants are exposed as class attributes for convenience.
@@ -261,7 +272,8 @@ class Win32Registry:
 
     @staticmethod
     def read(hive: int, subkey: str, value_name: str) -> str | int | bytes | None:
-        """Read a registry value.
+        """
+        Read a registry value.
 
         :param hive: Registry hive (e.g., Win32Registry.HKLM)
         :type hive: int
@@ -289,7 +301,8 @@ class Win32Registry:
         value: str | int,
         value_type: int | None = None,
     ) -> bool:
-        """Write a registry value. Creates the subkey if it doesn't exist.
+        """
+        Write a registry value. Creates the subkey if it doesn't exist.
 
         :param hive: Registry hive (e.g., Win32Registry.HKLM)
         :type hive: int
@@ -318,7 +331,8 @@ class Win32Registry:
 
     @staticmethod
     def delete(hive: int, subkey: str, value_name: str) -> bool:
-        """Delete a registry value.
+        """
+        Delete a registry value.
 
         :param hive: Registry hive (e.g., Win32Registry.HKLM)
         :type hive: int
@@ -340,7 +354,8 @@ class Win32Registry:
 
 
 class Win32ServiceManager:
-    """Manage Windows services via ``sc.exe``.
+    """
+    Manage Windows services via ``sc.exe``.
 
     :Example:
 
@@ -350,7 +365,8 @@ class Win32ServiceManager:
 
     @staticmethod
     def is_running(service_name: str) -> bool:
-        """Check if a Windows service is running.
+        """
+        Check if a Windows service is running.
 
         :param service_name: Service name
         :type service_name: str
@@ -366,7 +382,8 @@ class Win32ServiceManager:
 
     @staticmethod
     def stop(service_name: str) -> bool:
-        """Stop a Windows service.
+        """
+        Stop a Windows service.
 
         :param service_name: Service name
         :type service_name: str
@@ -382,7 +399,8 @@ class Win32ServiceManager:
 
     @staticmethod
     def start(service_name: str) -> bool:
-        """Start a Windows service.
+        """
+        Start a Windows service.
 
         :param service_name: Service name
         :type service_name: str
@@ -398,7 +416,8 @@ class Win32ServiceManager:
 
     @staticmethod
     def delete(service_name: str) -> bool:
-        """Delete (remove) a Windows service.
+        """
+        Delete (remove) a Windows service.
 
         :param service_name: Service name
         :type service_name: str
