@@ -1,27 +1,29 @@
 """
-Protocol definitions for MDM provider implementations.
+Abstract base class for MDM provider implementations.
 
 Defines the contract that each MDM provider (Jamf, Intune, etc.) must satisfy
-for script parameter parsing and MDM-specific operations.
+for script parameter parsing, plus the shared value-coercion helpers.
 """
 
 from __future__ import annotations
 
 import os
 import sys
-from typing import Protocol, runtime_checkable
+from abc import ABC, abstractmethod
 
 
-@runtime_checkable
-class MdmParamProvider(Protocol):
+class MdmParamParser(ABC):
     """
-    Protocol for MDM provider-specific script parameter parsing.
+    Abstract base class for MDM provider-specific script parameter parsing.
 
     Each MDM provider handles script parameters differently:
     - Jamf Pro: positional args via `sys.argv[4..11]`
     - Intune: environment variables or command-line arguments
+
+    Subclasses implement `get`; `get_bool` and `get_int` are shared here.
     """
 
+    @abstractmethod
     def get(self, key: int | str) -> str | None:
         """
         Get a script parameter by key.
@@ -42,7 +44,10 @@ class MdmParamProvider(Protocol):
         :return: Boolean value (False if parameter is missing)
         :rtype: bool
         """
-        ...
+        value = self.get(key)
+        if not value:
+            return False
+        return value.strip().lower() in ("true", "1", "yes", "y")
 
     def get_int(self, key: int | str, default: int = 0) -> int:
         """
@@ -55,50 +60,83 @@ class MdmParamProvider(Protocol):
         :return: Integer value
         :rtype: int
         """
-        ...
+        value = self.get(key)
+        if not value:
+            return default
+        try:
+            return int(value.strip())
+        except ValueError:
+            return default
 
 
-def get_provider(provider: str | None = None) -> MdmParamProvider:
+class GenericParamParser(MdmParamParser):
+    """
+    Generic positional parameter parser.
+
+    The neutral default for providers that pass parameters as plain positional
+    ``sys.argv`` arguments with no reserved indices. Used when no provider is
+    specified and the platform isn't recognized as Jamf or Intune.
+    """
+
+    def get(self, key: int | str) -> str | None:
+        """
+        Get a positional parameter by ``sys.argv`` index.
+
+        :param key: Positional argument index
+        :type key: int | str
+        :return: Parameter value, or None if the index is out of range
+        :rtype: str | None
+        :raises TypeError: If key is not an integer
+        """
+        if not isinstance(key, int):
+            raise TypeError(
+                f"Generic parameter keys must be integers (got {type(key).__name__}). "
+                f"Use an integer sys.argv index."
+            )
+        return sys.argv[key] if len(sys.argv) > key else None
+
+
+def get_provider(provider: str | None = None) -> MdmParamParser:
     """
     Get the MDM parameter provider instance.
 
     Detection order:
-    1. Explicit ``provider`` argument ("jamf" or "intune")
+    1. Explicit ``provider`` argument ("jamf", "intune", or "generic")
     2. ``PYMDM_MDM_PROVIDER`` environment variable
-    3. Platform-based default: "jamf" on macOS, "intune" on Windows
+    3. Platform-based default: "intune" on Windows, "generic" everywhere else
 
     :param provider: Explicit provider name, defaults to None (auto-detect)
     :type provider: str | None, optional
     :return: MDM provider instance
-    :rtype: MdmParamProvider
+    :rtype: MdmParamParser
     :raises ValueError: If the provider name is not recognized
     """
     if provider is None:
         provider = os.environ.get("PYMDM_MDM_PROVIDER")
 
     if provider is None:
-        # Default based on platform
-        if sys.platform == "darwin":
-            provider = "jamf"
-        elif sys.platform == "win32":
+        # macOS is not assumed to be Jamf; the neutral positional parser is the safe default
+        if sys.platform == "win32":
             provider = "intune"
         else:
-            provider = "jamf"  # Default to Jamf for other platforms
+            provider = "generic"
 
     provider = provider.lower().strip()
 
-    if provider == "jamf":
-        from .jamf import JamfParamParser
+    match provider:
+        case "jamf":
+            from .jamf import JamfParamParser
 
-        return JamfParamParser()
+            return JamfParamParser()
+        case "intune":
+            from .intune import IntuneParamParser
 
-    if provider == "intune":
-        from .intune import IntuneParamProvider
-
-        return IntuneParamProvider()
-
-    raise ValueError(
-        f"Unknown MDM provider '{provider}'. "
-        f"Supported providers: jamf, intune. "
-        f"Set the PYMDM_MDM_PROVIDER environment variable to override detection."
-    )
+            return IntuneParamParser()
+        case "generic":
+            return GenericParamParser()
+        case _:
+            raise ValueError(
+                f"Unknown MDM provider '{provider}'. "
+                f"Supported providers: jamf, intune, generic. "
+                f"Set the PYMDM_MDM_PROVIDER environment variable to override detection."
+            )

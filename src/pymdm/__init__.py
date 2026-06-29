@@ -23,19 +23,19 @@ from .dialog import (
     TextField,
 )
 from .logger import MdmLogger
-from .param_parser import ParamParser
+from .mdm import get_provider
 from .system_info import SystemInfo
 from .text_tools import TextTools
 from .webhook_sender import WebhookSender
 
 __all__ = [
+    "get_provider",
     "CheckboxItem",
     "CommandRunner",
     "Dialog",
     "DialogExitCode",
     "DialogReturn",
     "DialogTemplate",
-    "ParamParser",
     "MdmLogger",
     "SelectItem",
     "SelectResult",

@@ -7,30 +7,30 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pymdm.mdm._base import MdmParamProvider, get_provider
-from pymdm.mdm.intune import IntuneParamProvider
+from pymdm.mdm._base import GenericParamParser, MdmParamParser, get_provider
+from pymdm.mdm.intune import IntuneParamParser
 from pymdm.mdm.jamf import JamfParamParser
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
 
 
-class TestMdmParamProviderProtocol:
-    """Verify all MdmParamProvider implementations satisfy the protocol."""
+class TestMdmParamParserProtocol:
+    """Verify all MdmParamParser implementations satisfy the protocol."""
 
     @pytest.mark.parametrize(
         "impl_class",
-        [JamfParamParser, IntuneParamProvider],
+        [JamfParamParser, IntuneParamParser],
         ids=["jamf", "intune"],
     )
     def test_is_param_provider(self, impl_class: type) -> None:
-        """Test that implementation is recognized as MdmParamProvider."""
+        """Test that implementation is recognized as MdmParamParser."""
         instance = impl_class()
-        assert isinstance(instance, MdmParamProvider)
+        assert isinstance(instance, MdmParamParser)
 
     @pytest.mark.parametrize(
         "impl_class",
-        [JamfParamParser, IntuneParamProvider],
+        [JamfParamParser, IntuneParamParser],
         ids=["jamf", "intune"],
     )
     def test_has_required_methods(self, impl_class: type) -> None:
@@ -52,27 +52,27 @@ class TestGetProvider:
     def test_explicit_intune(self) -> None:
         """Test explicit Intune provider selection."""
         provider = get_provider("intune")
-        assert isinstance(provider, IntuneParamProvider)
+        assert isinstance(provider, IntuneParamParser)
 
     def test_env_var_override(self, monkeypatch: MonkeyPatch) -> None:
         """Test PYMDM_MDM_PROVIDER env var override."""
         monkeypatch.setenv("PYMDM_MDM_PROVIDER", "intune")
         provider = get_provider()
-        assert isinstance(provider, IntuneParamProvider)
+        assert isinstance(provider, IntuneParamParser)
 
     def test_default_on_darwin(self, monkeypatch: MonkeyPatch) -> None:
         """Test that Jamf is default on macOS (darwin)."""
         monkeypatch.delenv("PYMDM_MDM_PROVIDER", raising=False)
         monkeypatch.setattr(sys, "platform", "darwin")
         provider = get_provider()
-        assert isinstance(provider, JamfParamParser)
+        assert isinstance(provider, GenericParamParser)
 
     def test_default_on_win32(self, monkeypatch: MonkeyPatch) -> None:
         """Test that Intune is default on Windows (win32)."""
         monkeypatch.delenv("PYMDM_MDM_PROVIDER", raising=False)
         monkeypatch.setattr(sys, "platform", "win32")
         provider = get_provider()
-        assert isinstance(provider, IntuneParamProvider)
+        assert isinstance(provider, IntuneParamParser)
 
     def test_unknown_provider_raises(self) -> None:
         """Test that unknown provider names raise ValueError."""
@@ -85,4 +85,4 @@ class TestGetProvider:
         assert isinstance(provider, JamfParamParser)
 
         provider = get_provider("Intune")
-        assert isinstance(provider, IntuneParamProvider)
+        assert isinstance(provider, IntuneParamParser)

@@ -8,20 +8,24 @@ A Python utility package for macOS MDM deployment scripts, built for [MacAdmins 
 
 | Feature | macOS (Jamf) | Windows (Intune) |
 |---|---|---|
-| ParamParser (Jamf) | Yes | -- |
+| JamfParamParser | Yes | -- |
+| IntuneParamParser | -- | Yes |
+| GenericParamParser | Yes | Yes |
 | Dialog (swiftDialog) | Yes | Graceful no-op |
 | CommandRunner | Yes | Yes |
 | TextTools | Yes | Yes |
 | SystemInfo | Yes | Yes |
 | MdmLogger | Yes | Yes |
 | WebhookSender | Yes | Yes |
-| IntuneParamProvider | -- | Yes |
 | DarwinDefaults | Yes | -- |
 | DarwinServiceManager | Yes | -- |
 | Win32Registry | -- | Yes |
 | Win32ServiceManager | -- | Yes |
 
 See the [User Guide](https://pymdm.readthedocs.io/en/latest/user-guide/index.html) for what each piece does.
+
+> [!NOTE]
+> **Windows/Intune support is experimental.** The Windows code paths are unit-tested but have not yet been validated on real Windows hardware. Treat them as a starting point rather than a guarantee. Bug reports and contributions from Windows/Intune admins are very welcome.
 
 ## Installation
 
@@ -37,9 +41,11 @@ pip install pymdm[requests]
 #!/usr/local/bin/managed_python3
 """Example Jamf Pro policy script."""
 
-from pymdm import MdmLogger, ParamParser, CommandRunner, SystemInfo, WebhookSender
+from pymdm import MdmLogger, CommandRunner, SystemInfo, WebhookSender
+from pymdm.mdm import get_provider
 
-logger = MdmLogger(debug=ParamParser.get_bool(4), output_path="/var/log/my_script.log")
+params = get_provider("jamf")    # explicit; get_provider() now defaults to GenericParamParser
+logger = MdmLogger(debug=params.get_bool(4), output_path="/var/log/my_script.log")
 runner = CommandRunner(logger=logger)
 logger.log_startup("my_script", version="1.0.0")
 
@@ -51,7 +57,7 @@ try:
     output = runner.run(["/usr/bin/sw_vers", "-productVersion"])
     logger.info(f"macOS version: {output}")
 
-    webhook = WebhookSender(url=ParamParser.get(5), logger=logger)
+    webhook = WebhookSender(url=params.get(5), logger=logger)
     webhook.send(hostname=hostname, serial=serial, status="success")
 except Exception as e:
     logger.log_exception("Script failed", e, exit_code=1)

@@ -19,21 +19,6 @@ class SystemInfo:
     the original static-method API for backward compatibility.
     """
 
-    # Expose invalid_users from the current platform for backward compatibility
-    @staticmethod
-    def _get_invalid_users() -> tuple[str, ...]:
-        """
-        Get the invalid users tuple for the current platform.
-
-        :return: Tuple of usernames considered invalid
-        :rtype: tuple[str, ...]
-        """
-        return get_platform().invalid_users
-
-    # Keep _INVALID_USERS as a class-level descriptor for backward compatibility
-    # Code that accessed SystemInfo._INVALID_USERS directly will still work
-    _INVALID_USERS = ("root", "", "loginwindow", "_mbsetupuser")
-
     @staticmethod
     def get_serial_number() -> str | None:
         """
