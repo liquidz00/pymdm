@@ -44,7 +44,7 @@ pip install pymdm[requests]
 from pymdm import MdmLogger, CommandRunner, SystemInfo, WebhookSender
 from pymdm.mdm import get_provider
 
-params = get_provider("jamf")    # explicit; get_provider() now defaults to GenericParamParser
+params = get_provider("jamf")  # explicit; get_provider() now defaults to GenericParamParser
 logger = MdmLogger(debug=params.get_bool(4), output_path="/var/log/my_script.log")
 runner = CommandRunner(logger=logger)
 logger.log_startup("my_script", version="1.0.0")

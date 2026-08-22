@@ -35,6 +35,8 @@ jobs:
         run: uv sync --extra dev
 
       - name: Lint and format
+        # pwsh (the Windows default) only fails on the LAST command; bash gives us -e on all runners
+        shell: bash
         run: |
           uv run ruff format --check .
           uv run ruff check .

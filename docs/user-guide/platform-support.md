@@ -37,8 +37,8 @@ pymdm auto-detects the current platform and MDM provider at import time. Overrid
 from pymdm.platforms import get_platform
 from pymdm.mdm import get_provider
 
-platform = get_platform()    # DarwinPlatformInfo or Win32PlatformInfo
-provider = get_provider()    # JamfParamParser, IntuneParamParser, or GenericParamParser
+platform = get_platform()  # DarwinPlatformInfo or Win32PlatformInfo
+provider = get_provider()  # JamfParamParser, IntuneParamParser, or GenericParamParser
 ```
 
 ## Task Mapping: Jamf vs Intune
