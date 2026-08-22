@@ -19,7 +19,7 @@ from pymdm import (
 from pymdm.mdm import get_provider
 
 # Setup
-params = get_provider("jamf")    # explicit; get_provider() now defaults to GenericParamParser
+params = get_provider("jamf")  # explicit; get_provider() now defaults to GenericParamParser
 logger = MdmLogger(
     debug=params.get_bool(4),
     output_path="/var/log/my_script.log",
@@ -56,7 +56,7 @@ except Exception as e:
 from pymdm import MdmLogger, CommandRunner, SystemInfo, WebhookSender
 from pymdm.mdm import get_provider
 
-params = get_provider()    # IntuneParamParser on Windows
+params = get_provider()  # IntuneParamParser on Windows
 logger = MdmLogger(
     debug=params.get_bool("DEBUG"),
     output_path=r"C:\ProgramData\Scripts\my_script.log",
@@ -70,9 +70,7 @@ try:
     hostname = SystemInfo.get_hostname()
     logger.info(f"Running on {hostname} ({serial})")
 
-    output = runner.run(
-        ["powershell", "-Command", "Get-ComputerInfo | Select-Object OsVersion"]
-    )
+    output = runner.run(["powershell", "-Command", "Get-ComputerInfo | Select-Object OsVersion"])
     logger.info(f"System info: {output}")
 
     webhook_url = params.get("WEBHOOK_URL")
@@ -110,9 +108,7 @@ DarwinDefaults(runner=runner).write("com.apple.dock", "tilesize", "48", "-int", 
 if DarwinServiceManager.is_loaded("system/com.example.daemon"):
     DarwinServiceManager.bootout("system/com.example.daemon")
 
-DarwinServiceManager.bootstrap(
-    "system", "/Library/LaunchDaemons/com.example.daemon.plist"
-)
+DarwinServiceManager.bootstrap("system", "/Library/LaunchDaemons/com.example.daemon.plist")
 ```
 
 ### Windows Registry and Services
