@@ -1,21 +1,32 @@
 version: 2
+
+# One weekly PR for all version updates across uv + GitHub Actions
+multi-ecosystem-groups:
+  dependencies:
+    schedule:
+      interval: "weekly"
+
 updates:
 
-  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
+    patterns: ["*"]
+    multi-ecosystem-group: "dependencies"
+    # Multi-ecosystem groups skip security updates, so batch those per ecosystem
     groups:
-      github-actions:
+      actions-security:
+        applies-to: security-updates
         patterns: ["*"]
 
-  # Python (uv-managed). Groups all updates into a single weekly PR
-  # to avoid noise — security alerts still fire individually as needed.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
+    patterns: ["*"]
+    multi-ecosystem-group: "dependencies"
     groups:
-      python-deps:
+      python-security:
+        applies-to: security-updates
         patterns: ["*"]
